@@ -120,8 +120,13 @@ def transcriptomicsReader():
     return data
 
 # 0. user defined variables
-transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
-proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
+#transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
+#proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
+
+transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
+proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
+
+#scipy.stats.norm.interval(2/3)
 
 # 1. reading data
 print('reading data...')
@@ -131,7 +136,7 @@ rnaExpression=transcriptomicsReader()
 log2transcriptome=transcriptomeRelativeConverter()
 
 # 1.2. reading protein data
-log2proteome=proteomicsReader()
+log2proteome,proteomeSignificance=proteomicsReader()
 
 # 1.3. checking consistency of transcriptome and proteome names
 transcriptomeNames=[]
@@ -170,8 +175,6 @@ print()
 # 2. building a figure of log2 mRNA versus log2 pt
 print('analyzing mRNA vs protein relationship...')
 
-
-
 for ptReplicate in log2proteome['lysate'].keys():
     for ptTimepoint in log2proteome['lysate'][ptReplicate].keys():
         x=[]
@@ -204,7 +207,7 @@ for ptReplicate in log2proteome['lysate'].keys():
         matplotlib.pyplot.tight_layout()
         matplotlib.pyplot.tight_layout()
 
-        matplotlib.pyplot.savefig('relation.{}.{}.png'.format(ptReplicate,ptTimepoint))
+        matplotlib.pyplot.savefig('figures/relation.{}.{}.png'.format(ptReplicate,ptTimepoint))
         matplotlib.pyplot.clf()
 print()               
                 
