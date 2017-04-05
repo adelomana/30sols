@@ -168,11 +168,11 @@ def transcriptomicsReader():
     return data
 
 # 0. user defined variables
-#transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
-#proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
-
-transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
-proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
+transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
+proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
+#transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
+#proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
+timepoints=[14.3,21.5,28.8,40.8] # needs to be double checked with arjun
 
 
 # 1. reading data
@@ -184,6 +184,8 @@ log2transcriptome=transcriptomeRelativeConverter()
 
 # 1.2. reading protein data
 log2proteome,proteomeSignificance=proteomicsReader()
+log2proteomeSortedLabels=['tp2vs1','tp3vs1','tp4vs1']
+log2proteomeSortedReplicates=['br1','br2','br3']
 
 # 1.3. checking consistency of transcriptome and proteome names
 transcriptomeNames=[]
@@ -202,8 +204,8 @@ for fraction in log2proteome.keys():
                 if name not in proteomeNames:
                     proteomeNames.append(name)
 
-print('found expression quantification for {} transcripts.'.format(len(transcriptomeNames)))
-print('found expression quantification for {} proteins.'.format(len(proteomeNames)))
+print('\t found expression quantification for {} transcripts.'.format(len(transcriptomeNames)))
+print('\t found expression quantification for {} proteins.'.format(len(proteomeNames)))
 
 # define which proteins do not have transcript equivalent
 consistentNames=[]
@@ -214,9 +216,9 @@ for ptName in proteomeNames:
     else:
         inconsistentNames.append(ptName)
 consistentNames.sort()
-print('found transcriptome info for {} proteins.'.format(len(consistentNames)))
-print('inconsistent protein annotation for {} proteins:'.format(len(inconsistentNames)))
-print(inconsistentNames)
+print('\t found transcriptome info for {} proteins.'.format(len(consistentNames)))
+print('\t lost {} proteins for annotation discrepancies:'.format(len(inconsistentNames)))
+print('\t\t {}'.format(','.join(inconsistentNames)))
 print()
 
 # 2. building a figure of log2 mRNA versus log2 pt
@@ -225,20 +227,32 @@ print()
 # check how many pt are good replicates, same for transcripts. Plot it as a % of detected. use scipy.stats.norm.interval(2/3) as a rule for good replicates.
 
 # 3. computing TLR
+print('computing variables for TLR...')
+TP=numpy.array(timepoints)-timepoints[0]
 
 # 3.1. computing pt vs mRNa ratio (PMR)
 ### consider plotting the pt profiles (x3) and rna profiles, then the PMRs
 for name in consistentNames:
-    validity=0
-    protein=[]
-    for ptReplicate in log2proteome['lysate'].keys():
-        series=[]
-        for ptTimepoint in log2proteome['lysate'][ptReplicate].keys():
+    proteinObservations=[]
+    for ptReplicate in log2proteomeSortedReplicates:
+        series=[0] # manually adding the first value, log2 FC = 0 for first timepoint
+        for ptTimepoint in log2proteomeSortedLabels:
             if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys(): 
                 value=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
                 series.append(value)
-        if len(series) == 3:
-            validity=validity+1
-        protein.append(series)
-    print(name)
-    print(protein)
+        print(series)
+        proteinObservations.append(series)
+
+    PO=numpy.array(proteinObservations).T 
+    if PO.shape == (4,3): # 4 timepoints, 3 trajectories
+
+        matplotlib.pyplot.plot(TP,PO,'-')
+        
+        figureName='figures/{}.pdf'.format(name)
+        matplotlib.pyplot.xlabel('time')
+        matplotlib.pyplot.ylabel('log$_2$ FC protein')
+        matplotlib.pyplot.savefig(figureName)
+        matplotlib.pyplot.clf()
+
+        sys.exit()
+        
