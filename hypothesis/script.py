@@ -10,6 +10,7 @@ matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsiz
 def proteomicsReader():
 
     data={} # data[lysate/rbf][rep1/rep2/rep3][tp2vs1/tp3vs1/tp4vs1][geneName]=log2FC
+    significance={} # same as data
     
     allFiles=os.listdir(proteomicsDataFolder)
     csvFiles=[element for element in allFiles if '.csv' in element and '._' not in element]
@@ -22,14 +23,14 @@ def proteomicsReader():
         replicate=brokenName[1]
 
         if condition not in data.keys():
-            data[condition]={}
+            data[condition]={}; significance[condition]={}
         if replicate not in data[condition].keys():
-            data[condition][replicate]={}
-
+            data[condition][replicate]={}; significance[condition][replicate]={}
+            
         timepoints=['tp2vs1','tp3vs1','tp4vs1']
         for timepoint in timepoints:
             if timepoint not in data[condition][replicate].keys():
-                data[condition][replicate][timepoint]={}
+                data[condition][replicate][timepoint]={}; significance[condition][replicate][timepoint]={}
 
         with open(path,'r') as f:
             next(f)
@@ -41,11 +42,58 @@ def proteomicsReader():
                 b=float(vector[6])
                 c=float(vector[10])
 
+                d=float(vector[2+2])
+                e=float(vector[6+2])
+                f=float(vector[10+2])
+
                 data[condition][replicate]['tp2vs1'][geneName]=a
                 data[condition][replicate]['tp3vs1'][geneName]=b
                 data[condition][replicate]['tp4vs1'][geneName]=c
+
+                significance[condition][replicate]['tp2vs1'][geneName]=d
+                significance[condition][replicate]['tp3vs1'][geneName]=e
+                significance[condition][replicate]['tp4vs1'][geneName]=f
             
-    return data
+    return data,significance
+
+def staticAnalysis_RNAprotein():
+
+    print('analyzing mRNA vs protein relationship in a static manner...')
+
+    for ptReplicate in log2proteome['lysate'].keys():
+        for ptTimepoint in log2proteome['lysate'][ptReplicate].keys():
+
+            matplotlib.pyplot.plot([-7,7],[-7,7],ls='--',lw=2,color='blue')
+            matplotlib.pyplot.plot([0,0],[-7,7],ls='--',lw=2,color='blue')
+
+            for name in consistentNames:
+                if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys():
+
+                    ptRatio=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
+                    ptSignificance=proteomeSignificance['lysate'][ptReplicate][ptTimepoint][name]
+                    mRNAratio=log2transcriptome['trna'][ptReplicate][ptTimepoint][name]
+
+                    if ptSignificance > 0.05:
+                        theColor='black'
+
+                    else:
+                        theColor='red'
+                        matplotlib.pyplot.plot(mRNAratio,ptRatio,'o',alpha=0.2,mew=0,color=theColor)
+
+                    #matplotlib.pyplot.plot(mRNAratio,ptRatio,'o',alpha=0.2,mew=0,color=theColor)
+
+            matplotlib.pyplot.xlim([-8,8])
+            matplotlib.pyplot.ylim([-8,8])
+
+            matplotlib.pyplot.xlabel('log$_2$ FC mRNA')
+            matplotlib.pyplot.ylabel('log$_2$ FC protein')
+
+            matplotlib.pyplot.tight_layout()
+
+            matplotlib.pyplot.savefig('figures/relation.{}.{}.png'.format(ptReplicate,ptTimepoint))
+            matplotlib.pyplot.clf()
+
+    return None
 
 def transcriptomeRelativeConverter():
 
@@ -126,7 +174,6 @@ def transcriptomicsReader():
 transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
 proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
 
-#scipy.stats.norm.interval(2/3)
 
 # 1. reading data
 print('reading data...')
@@ -166,52 +213,32 @@ for ptName in proteomeNames:
         consistentNames.append(ptName)
     else:
         inconsistentNames.append(ptName)
-
+consistentNames.sort()
 print('found transcriptome info for {} proteins.'.format(len(consistentNames)))
 print('inconsistent protein annotation for {} proteins:'.format(len(inconsistentNames)))
 print(inconsistentNames)
 print()
 
 # 2. building a figure of log2 mRNA versus log2 pt
-print('analyzing mRNA vs protein relationship...')
+#staticAnalysis_RNAprotein()
 
-for ptReplicate in log2proteome['lysate'].keys():
-    for ptTimepoint in log2proteome['lysate'][ptReplicate].keys():
-        x=[]
-        y=[]
-        for name in consistentNames:
-            if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys():
-                
-                ptRatio=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
-                mRNAratio=log2transcriptome['trna'][ptReplicate][ptTimepoint][name]
-                
-                x.append(mRNAratio)
-                y.append(ptRatio)
-
-        print(ptReplicate,ptTimepoint)
-        print(min(x),max(x))
-        print(min(y),max(y))
-        print()
-        matplotlib.pyplot.plot(x,y,'o',alpha=0.1,mew=0,color='black')
-        
-
-        matplotlib.pyplot.plot([-7,7],[-7,7],ls='--',lw=2,color='red')
-        matplotlib.pyplot.plot([0,0],[-7,7],ls='--',lw=2,color='red')
-        
-        matplotlib.pyplot.xlim([-8,8])
-        matplotlib.pyplot.ylim([-8,8])
-
-        matplotlib.pyplot.xlabel('log$_2$ FC mRNA')
-        matplotlib.pyplot.ylabel('log$_2$ FC protein')
-
-        matplotlib.pyplot.tight_layout()
-        matplotlib.pyplot.tight_layout()
-
-        matplotlib.pyplot.savefig('figures/relation.{}.{}.png'.format(ptReplicate,ptTimepoint))
-        matplotlib.pyplot.clf()
-print()               
-                
-
-# following the steps
+# check how many pt are good replicates, same for transcripts. Plot it as a % of detected. use scipy.stats.norm.interval(2/3) as a rule for good replicates.
 
 # 3. computing TLR
+
+# 3.1. computing pt vs mRNa ratio (PMR)
+### consider plotting the pt profiles (x3) and rna profiles, then the PMRs
+for name in consistentNames:
+    validity=0
+    protein=[]
+    for ptReplicate in log2proteome['lysate'].keys():
+        series=[]
+        for ptTimepoint in log2proteome['lysate'][ptReplicate].keys():
+            if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys(): 
+                value=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
+                series.append(value)
+        if len(series) == 3:
+            validity=validity+1
+        protein.append(series)
+    print(name)
+    print(protein)
