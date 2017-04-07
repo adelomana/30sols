@@ -5,7 +5,50 @@
 import os,sys,numpy
 import matplotlib,matplotlib.pyplot
 
+from lmfit import Model, CompositeModel
+
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
+
+def individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR):
+
+    markers=['o','s','^']
+    theAlpha=0.25
+
+    theColor='blue'
+    matplotlib.pyplot.plot(TP,numpy.mean(PO,1),'-',color=theColor,label='pt',lw=0.5)
+    for j in range(PO.shape[1]):
+        matplotlib.pyplot.plot(TP,PO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
+
+    theColor='red'
+    matplotlib.pyplot.plot(TP,numpy.mean(TO,1),'-',color=theColor,label='mRNA',lw=0.5)
+    for j in range(TO.shape[1]):
+        matplotlib.pyplot.plot(TP,TO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
+
+    theColor='orange'
+    matplotlib.pyplot.plot(TP,numpy.mean(RO,1),'-',color=theColor,label='RBF',lw=0.5)
+    for j in range(RO.shape[1]):
+        matplotlib.pyplot.plot(TP,RO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
+
+    theColor='green'
+    matplotlib.pyplot.plot(TP,deltaRA,'-',color=theColor,label='$\Delta$RA',lw=1)
+
+    theColor='purple'
+    matplotlib.pyplot.plot(TP,RHO,'-',color=theColor,label='rho',lw=1)
+
+    theColor='black'
+    matplotlib.pyplot.plot(TP,TLR,'-',color=theColor,label='TLR',lw=2)
+        
+    figureName='figures/{}.pdf'.format(name)
+    matplotlib.pyplot.xlabel('time')
+    matplotlib.pyplot.ylabel('log$_2$ FC')
+    matplotlib.pyplot.title(name)
+    matplotlib.pyplot.legend(loc=2)
+    matplotlib.pyplot.xlim([-20,30])
+    matplotlib.pyplot.ylim([-4,4])
+    matplotlib.pyplot.savefig(figureName)
+    matplotlib.pyplot.clf()
+
+    return None
 
 def proteomicsReader():
 
@@ -168,12 +211,17 @@ def transcriptomicsReader():
     return data
 
 # 0. user defined variables
+
+# 0.1. paths
 transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 #transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
 #proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
-timepoints=[14.3,21.5,28.8,40.8] # needs to be double checked with arjun
 
+# 0.2. variables
+timepoints=[14.3,21.5,28.8,40.8] # needs to be double checked with arjun
+sortedReplicateLabels=['br1','br2','br3']
+sortedRelativeTimePointLabels=['tp2vs1','tp3vs1','tp4vs1']
 
 # 1. reading data
 print('reading data...')
@@ -184,8 +232,6 @@ log2transcriptome=transcriptomeRelativeConverter()
 
 # 1.2. reading protein data
 log2proteome,proteomeSignificance=proteomicsReader()
-log2proteomeSortedLabels=['tp2vs1','tp3vs1','tp4vs1']
-log2proteomeSortedReplicates=['br1','br2','br3']
 
 # 1.3. checking consistency of transcriptome and proteome names
 transcriptomeNames=[]
@@ -232,27 +278,58 @@ TP=numpy.array(timepoints)-timepoints[0]
 
 # 3.1. computing pt vs mRNa ratio (PMR)
 ### consider plotting the pt profiles (x3) and rna profiles, then the PMRs
+rankFullProteinTrajectories=0
+
 for name in consistentNames:
+
+    # defining protein values
     proteinObservations=[]
-    for ptReplicate in log2proteomeSortedReplicates:
+    for ptReplicate in sortedReplicateLabels:
         series=[0] # manually adding the first value, log2 FC = 0 for first timepoint
-        for ptTimepoint in log2proteomeSortedLabels:
+        for ptTimepoint in sortedRelativeTimePointLabels:
             if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys(): 
                 value=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
                 series.append(value)
-        print(series)
         proteinObservations.append(series)
+    PO=numpy.array(proteinObservations).T
 
-    PO=numpy.array(proteinObservations).T 
-    if PO.shape == (4,3): # 4 timepoints, 3 trajectories
+    if PO.shape == (4,3): # 4 timepoints, 3 trajectories, full data set
+        rankFullProteinTrajectories=rankFullProteinTrajectories+1
 
-        matplotlib.pyplot.plot(TP,PO,'-')
+        # defining transcript values
+        rnaObservations=[]
+        for replicate in sortedReplicateLabels:
+            series=[0]
+            for tp in sortedRelativeTimePointLabels:
+                value=log2transcriptome['trna'][replicate][tp][name]
+                series.append(value)
+            rnaObservations.append(series)
+        TO=numpy.array(rnaObservations).T
+
+        # defining RBF values
+        rbfObservations=[]
+        for replicate in sortedReplicateLabels:
+            series=[0]
+            for tp in sortedRelativeTimePointLabels:
+                value=log2transcriptome['rbf'][replicate][tp][name]
+                series.append(value)
+            rbfObservations.append(series)
+        RO=numpy.array(rbfObservations).T
+
+        # fitting data to a model
+        # https://lmfit.github.io/lmfit-py/model.html
+        mod  = CompositeModel(Model(jump), Model(gaussian), convolve)
+
+        # computing TLR
+        deltaRA=numpy.mean(RO,1)-numpy.mean(TO,1)
+        RHO=numpy.mean(PO,1)-numpy.mean(TO,1)
+        TLR=RHO-deltaRA
         
-        figureName='figures/{}.pdf'.format(name)
-        matplotlib.pyplot.xlabel('time')
-        matplotlib.pyplot.ylabel('log$_2$ FC protein')
-        matplotlib.pyplot.savefig(figureName)
-        matplotlib.pyplot.clf()
+        # plotting
+        individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR)
+        
 
         sys.exit()
+        
+print(rankFullProteinTrajectories)
         
