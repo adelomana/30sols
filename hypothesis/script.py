@@ -5,7 +5,7 @@
 import os,sys,numpy
 import matplotlib,matplotlib.pyplot
 
-from lmfit import Model, CompositeModel
+#from lmfit import Model, CompositeModel
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 
@@ -33,18 +33,35 @@ def individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR):
     matplotlib.pyplot.plot(TP,deltaRA,'-',color=theColor,label='$\Delta$RA',lw=1)
 
     theColor='purple'
-    matplotlib.pyplot.plot(TP,RHO,'-',color=theColor,label='rho',lw=1)
+    matplotlib.pyplot.plot(TP,RHO,'-',color=theColor,label='$\\rho$',lw=1)
 
     theColor='black'
     matplotlib.pyplot.plot(TP,TLR,'-',color=theColor,label='TLR',lw=2)
-        
-    figureName='figures/{}.pdf'.format(name)
-    matplotlib.pyplot.xlabel('time')
+
+    if name in ribosomalProteinGenes:
+        figureName='figures/ribosomalProteins/{}.pdf'.format(name)
+    else:
+        figureName='figures/regularProteins/{}.pdf'.format(name)
+
+    matplotlib.pyplot.xlabel('time (h)')
     matplotlib.pyplot.ylabel('log$_2$ FC')
     matplotlib.pyplot.title(name)
     matplotlib.pyplot.legend(loc=2)
-    matplotlib.pyplot.xlim([-20,30])
-    matplotlib.pyplot.ylim([-4,4])
+    matplotlib.pyplot.xlim([-10,45])
+    
+    allValues=[PO,TO,RO,deltaRA,RHO,TLR]
+    topValues=[numpy.amax(element) for element in allValues]
+    bottomValues=[numpy.amin(element) for element in allValues]
+    if max(topValues) > 1.9:
+        a=max(topValues)+0.1*max(topValues)
+    else:
+        a=2
+    if min(bottomValues) < -1.9:
+        b=min(bottomValues)+0.1*min(bottomValues)
+    else:
+        b=-2    
+    matplotlib.pyplot.ylim([b,a])
+    
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()
 
@@ -98,6 +115,19 @@ def proteomicsReader():
                 significance[condition][replicate]['tp4vs1'][geneName]=f
             
     return data,significance
+
+def riboListReader():
+
+    riboProteins=[]
+    with open(ribosomalProteinsList,'r') as f:
+        for line in f:
+            vector=line.split(';')
+            name=vector[1].split('=')[1]
+            formattedName=name.replace('_','')
+            riboProteins.append(formattedName)
+    uniqueList=list(set(riboProteins))
+
+    return uniqueList
 
 def staticAnalysis_RNAprotein():
 
@@ -215,6 +245,7 @@ def transcriptomicsReader():
 # 0.1. paths
 transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
+ribosomalProteinsList='/Volumes/omics4tb/alomana/projects/TLR/data/genome/ribosomalProteins.txt'
 #transcriptomicsDataFile='/Users/adriandelomana/tmp/data/expression/expressionMatrix.kallisto.txt'
 #proteomicsDataFolder='/Users/adriandelomana/tmp/data/proteomics/all/'
 
@@ -267,6 +298,9 @@ print('\t lost {} proteins for annotation discrepancies:'.format(len(inconsisten
 print('\t\t {}'.format(','.join(inconsistentNames)))
 print()
 
+# 1.4. reading ribosomal proteins list
+ribosomalProteinGenes=riboListReader()
+
 # 2. building a figure of log2 mRNA versus log2 pt
 #staticAnalysis_RNAprotein()
 
@@ -274,10 +308,9 @@ print()
 
 # 3. computing TLR
 print('computing variables for TLR...')
-TP=numpy.array(timepoints)-timepoints[0]
+TP=numpy.array(timepoints)
 
 # 3.1. computing pt vs mRNa ratio (PMR)
-### consider plotting the pt profiles (x3) and rna profiles, then the PMRs
 rankFullProteinTrajectories=0
 
 for name in consistentNames:
@@ -318,7 +351,7 @@ for name in consistentNames:
 
         # fitting data to a model
         # https://lmfit.github.io/lmfit-py/model.html
-        mod  = CompositeModel(Model(jump), Model(gaussian), convolve)
+        #mod  = CompositeModel(Model(jump), Model(gaussian), convolve)
 
         # computing TLR
         deltaRA=numpy.mean(RO,1)-numpy.mean(TO,1)
@@ -326,10 +359,32 @@ for name in consistentNames:
         TLR=RHO-deltaRA
         
         # plotting
-        individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR)
-        
+        #individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR)
 
-        sys.exit()
-        
+        #sys.exit()
 print(rankFullProteinTrajectories)
+
+# 3.2. testing for distribution of affinity in first points
+x=[]
+y=[]
+
+for name in transcriptomeNames:
+    transcriptValues=[]
+    footprintValues=[]
+    for replicate in sortedReplicateLabels:
+        transcriptValues.append(numpy.log2(rnaExpression['trna'][replicate]['tp.1'][name]+1))
+        footprintValues.append(numpy.log2(rnaExpression['rbf'][replicate]['tp.1'][name]+1))
+
+    mT=numpy.median(transcriptValues)
+    mF=numpy.median(footprintValues)
+    x.append(numpy.median(transcriptValues))
+    y.append(numpy.median(footprintValues))
+
+D=numpy.array([x,y])
+
+matplotlib.pyplot.scatter(D)
+matplotlib.pyplot.xlabel('mRNA log2 (TPM+1)')
+matplotlib.pyplot.ylabel('RBF log2 (TPM+1)')
+matplotlib.pyplot.savefig('figure.pdf')
+                
         
