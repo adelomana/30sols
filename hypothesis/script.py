@@ -4,10 +4,18 @@
 
 import os,sys,numpy
 import matplotlib,matplotlib.pyplot
+import pyqt_fit,pyqt_fit.nonparam_regression,pyqt_fit.npr_methods,pyqt_fit.bootstrap
 
 #from lmfit import Model, CompositeModel
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
+
+def estimation(x,y):
+
+    est=pyqt_fit.nonparam_regression.NonParamRegression(x,y,method=pyqt_fit.npr_methods.LocalPolynomialKernel(q=0))
+    est.fit()
+
+    return est
 
 def individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR):
 
@@ -367,24 +375,101 @@ print(rankFullProteinTrajectories)
 # 3.2. testing for distribution of affinity in first points
 x=[]
 y=[]
+z=[]
 
 for name in transcriptomeNames:
     transcriptValues=[]
     footprintValues=[]
     for replicate in sortedReplicateLabels:
-        transcriptValues.append(numpy.log2(rnaExpression['trna'][replicate]['tp.1'][name]+1))
-        footprintValues.append(numpy.log2(rnaExpression['rbf'][replicate]['tp.1'][name]+1))
+        valueT=numpy.log10(rnaExpression['trna'][replicate]['tp.1'][name]+1)
+        valueF=numpy.log10(rnaExpression['rbf'][replicate]['tp.1'][name]+1)
+
+        transcriptValues.append(valueT)
+        footprintValues.append(valueF)
 
     mT=numpy.median(transcriptValues)
     mF=numpy.median(footprintValues)
-    x.append(numpy.median(transcriptValues))
-    y.append(numpy.median(footprintValues))
 
-D=numpy.array([x,y])
+    if mT > 0 and mF > 0:
+        x.append(mT)
+        y.append(mF)
+        z.append(name)
 
-matplotlib.pyplot.scatter(D)
-matplotlib.pyplot.xlabel('mRNA log2 (TPM+1)')
-matplotlib.pyplot.ylabel('RBF log2 (TPM+1)')
+# defining expectance
+#grid=numpy.linspace(numpy.log10(2),5,num=50)
+#result=pyqt_fit.bootstrap.bootstrap(estimation,x,y,repeats=1000,eval_points=grid,CI = (95,99.9))
+#print('done')
+
+grid=numpy.linspace(numpy.log10(2),3.9,num=20)
+means=[]
+pos=[]
+devs=[]
+redIndexes=[]
+blueIndexes=[]
+for i in range(len(grid)-1):
+    a=grid[i]; b=grid[i+1]
+    pos.append(numpy.mean([a,b]))
+    cluster=[]
+    for j in range(len(x)):
+        if a<=x[j] and x[j]<=b:
+            cluster.append(y[j])
+    means.append(numpy.mean(cluster))
+    devs.append(numpy.std(cluster))
+
+    canada=numpy.mean(cluster)+numpy.std(cluster)*1.96
+    mexico=numpy.mean(cluster)-numpy.std(cluster)*1.96
+
+    for j in range(len(x)):
+        if a<=x[j] and x[j]<=b:
+            if y[j] > canada:
+                redIndexes.append(j)
+                print('red',z[j])
+            if y[j] < mexico:
+                blueIndexes.append(j)
+                print('blue',z[j])
+    print(len(cluster))
+
+top=numpy.array(means)+numpy.array(devs)*1.96
+bottom=numpy.array(means)-numpy.array(devs)*1.96
+
+redx=[x[i] for i in range(len(x)) if i in redIndexes]
+redy=[y[i] for i in range(len(x)) if i in redIndexes]
+
+bluex=[x[i] for i in range(len(x)) if i in blueIndexes]
+bluey=[y[i] for i in range(len(x)) if i in blueIndexes]
+
+blackx=[x[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
+blacky=[y[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
+
+matplotlib.pyplot.plot(blackx,blacky,'ok',alpha=0.1,mew=0)
+
+matplotlib.pyplot.plot(pos,means,'-g',lw=2)
+matplotlib.pyplot.plot(pos,top,':g')
+matplotlib.pyplot.plot(pos,bottom,':g')
+
+matplotlib.pyplot.plot(redx,redy,'or',mew=0)
+matplotlib.pyplot.plot(bluex,bluey,'ob',mew=0)
+
+
+#matplotlib.pyplot.plot(grid,result.y_fit(grid),'b',lw=1,label='k0')
+
+#matplotlib.pyplot.plot(grid, result.CIs[0][0,0], 'g--', label='95% CI')
+#matplotlib.pyplot.plot(grid, result.CIs[0][0,1], 'g--', linewidth=2)
+
+#matplotlib.pyplot.plot(grid, result.CIs[0][1,0], 'y--', label='95% CI')
+#matplotlib.pyplot.plot(grid, result.CIs[0][1,1], 'y--', linewidth=2)
+
+#matplotlib.pyplot.plot(grid,k1(grid),'r',lw=2,label='k1')
+#matplotlib.pyplot.plot(grid,k2(grid),'orange',lw=2,label='k2')
+#matplotlib.pyplot.plot(grid,k3(grid),'yellow',lw=2,label='k3')
+
+matplotlib.pyplot.xlim([-0.2,6])
+matplotlib.pyplot.xlim([-0.2,6])
+matplotlib.pyplot.xlabel('mRNA log$_{10}$ (TPM+1)')
+matplotlib.pyplot.ylabel('RBF log$_{10}$ (TPM+1)')
+
+matplotlib.pyplot.tight_layout()
+#matplotlib.pyplot.axes().set_aspect('equal')
 matplotlib.pyplot.savefig('figure.pdf')
                 
         
