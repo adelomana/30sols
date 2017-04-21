@@ -2,13 +2,52 @@
 ### this script tests the hypothesis that protein expression can be explained by trends in RPF, i.e., TLR
 ###
 
-import os,sys,numpy
+import os,sys,numpy,random
 import matplotlib,matplotlib.pyplot
 import pyqt_fit,pyqt_fit.nonparam_regression,pyqt_fit.npr_methods,pyqt_fit.bootstrap
+import scipy,scipy.stats
 
 #from lmfit import Model, CompositeModel
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
+
+def backgroundCalculator(size,layer,time,backgroundOutliers):
+
+    dist=[]
+    iterations=100
+    if layer == 'pt':
+        source=log2proteome
+    elif layer == 'mRNA':
+        source=log2transcriptome
+    else:
+        print('error, exit')
+        sys.exit()
+
+    for i in range(iterations):
+        selected=random.sample(backgroundOutliers,size)
+        for element in selected:
+            x=[]
+            for replicate in sortedReplicateLabels:
+                value=None
+                try:
+                    if layer == 'pt':
+                        value=log2proteome['lysate'][replicate][time][element]
+                    elif layer == 'mRNA':
+                        value=log2transcriptome['trna'][replicate][time][element]
+                    else:
+                        print('error, exit')
+                        sys.exit()
+                except:
+                    pass
+                if value != None:
+                    x.append(value)
+            if x != []:
+                average=numpy.median(x)
+                dist.append(numpy.median(x))
+
+    print(size,layer,time,len(dist))
+            
+    return dist
 
 def estimation(x,y):
 
@@ -38,10 +77,10 @@ def individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR):
         matplotlib.pyplot.plot(TP,RO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
 
     theColor='green'
-    matplotlib.pyplot.plot(TP,deltaRA,'-',color=theColor,label='$\Delta$RA',lw=1)
+    matplotlib.pyplot.plot(TP,deltaRA,'-',color=theColor,label='RO',lw=1)
 
     theColor='purple'
-    matplotlib.pyplot.plot(TP,RHO,'-',color=theColor,label='$\\rho$',lw=1)
+    matplotlib.pyplot.plot(TP,RHO,'-',color=theColor,label='$\\beta$',lw=1)
 
     theColor='black'
     matplotlib.pyplot.plot(TP,TLR,'-',color=theColor,label='TLR',lw=2)
@@ -74,6 +113,202 @@ def individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR):
     matplotlib.pyplot.clf()
 
     return None
+
+def outliersChecker(topOutliers,bottomOutliers,backgroundOutliers):
+
+    '''
+    this function checks outliers expression distribution in the next time points
+    '''
+
+    print('top',len(topOutliers))
+    print('bottom',len(bottomOutliers))
+
+    # defining expression (mRNA and pt) of top and bottom outliers in t2 and t4
+    boxData={}
+    boxData['mRNA.t2']=[]
+    boxData['mRNA.t4']=[]
+    boxData['pt.t2']=[]
+    boxData['pt.t4']=[]
+    for outlier in topOutliers:
+        a=[]; b=[]; c=[]; d=[]
+        for replicate in sortedReplicateLabels:
+            a.append(log2transcriptome['trna'][replicate]['tp2vs1'][outlier])
+            b.append(log2transcriptome['trna'][replicate]['tp4vs1'][outlier])
+
+            try:
+                c.append(log2proteome['lysate'][replicate]['tp2vs1'][outlier])
+                d.append(log2proteome['lysate'][replicate]['tp4vs1'][outlier])
+            except:
+                pass
+
+        boxData['mRNA.t2'].append(numpy.median(a))
+        boxData['mRNA.t4'].append(numpy.median(b))
+        if len(c) != 0:
+            boxData['pt.t2'].append(numpy.median(c))
+        if len(d) != 0:
+            boxData['pt.t4'].append(numpy.median(d))
+
+    o1=boxData['mRNA.t2']
+    o2=boxData['pt.t2']
+    o3=boxData['mRNA.t4']
+    o4=boxData['pt.t4']
+
+    b1=backgroundCalculator(len(o1),'mRNA','tp2vs1',backgroundOutliers)
+    b2=backgroundCalculator(len(o2),'pt','tp2vs1',backgroundOutliers)
+    b3=backgroundCalculator(len(o3),'mRNA','tp4vs1',backgroundOutliers)
+    b4=backgroundCalculator(len(o4),'pt','tp4vs1',backgroundOutliers)
+
+    saved=b1
+
+    results1=scipy.stats.mannwhitneyu(o1,b1)
+    results2=scipy.stats.mannwhitneyu(o2,b2)
+    results3=scipy.stats.mannwhitneyu(o3,b3)
+    results4=scipy.stats.mannwhitneyu(o4,b4)
+    print(results1,numpy.median(o1),numpy.median(b1))
+    print(results2)
+    print(results3)
+    print(results4)
+    
+    matplotlib.pyplot.boxplot([o1,b1,o2,b2,o3,b3,o4,b4],labels=['mRNA.t2','B','pt.t2','B','mRNA.t4','B','pt.t4','B'],positions=[1,1.75,3,3.75,5,5.75,7,7.75])
+    matplotlib.pyplot.ylabel('log$_2$ FC')
+    matplotlib.pyplot.title('top outliers')
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/topOutliers.pdf')
+    matplotlib.pyplot.clf()
+
+    ###
+    ###
+    ###
+    
+    boxData={}
+    boxData['mRNA.t2']=[]
+    boxData['mRNA.t4']=[]
+    boxData['pt.t2']=[]
+    boxData['pt.t4']=[]
+    
+    for outlier in bottomOutliers:
+        a=[]; b=[]; c=[]; d=[]
+        for replicate in sortedReplicateLabels:
+            a.append(log2transcriptome['trna'][replicate]['tp2vs1'][outlier])
+            b.append(log2transcriptome['trna'][replicate]['tp4vs1'][outlier])
+
+            try:
+                c.append(log2proteome['lysate'][replicate]['tp2vs1'][outlier])
+                d.append(log2proteome['lysate'][replicate]['tp4vs1'][outlier])
+            except:
+                pass
+
+        boxData['mRNA.t2'].append(numpy.median(a))
+        boxData['mRNA.t4'].append(numpy.median(b))
+        if len(c) != 0:
+            boxData['pt.t2'].append(numpy.median(c))
+        if len(d) != 0:
+            boxData['pt.t4'].append(numpy.median(d))
+
+    o1=boxData['mRNA.t2']
+    o2=boxData['pt.t2']
+    o3=boxData['mRNA.t4']
+    o4=boxData['pt.t4']
+
+    b1=backgroundCalculator(len(o1),'mRNA','tp2vs1',backgroundOutliers)
+    b2=backgroundCalculator(len(o2),'pt','tp2vs1',backgroundOutliers)
+    b3=backgroundCalculator(len(o3),'mRNA','tp4vs1',backgroundOutliers)
+    b4=backgroundCalculator(len(o4),'pt','tp4vs1',backgroundOutliers)
+
+    results1=scipy.stats.mannwhitneyu(o1,b1)
+    results2=scipy.stats.mannwhitneyu(o2,b2)
+    results3=scipy.stats.mannwhitneyu(o3,b3)
+    results4=scipy.stats.mannwhitneyu(o4,b4)
+    print(results1,numpy.median(o1),numpy.median(b1))
+    print(results2)
+    print(results3,numpy.median(o3),numpy.median(b3))
+    print(results4)
+    
+    matplotlib.pyplot.boxplot([o1,b1,o2,b2,o3,b3,o4,b4],labels=['mRNA.t2','B','pt.t2','B','mRNA.t4','B','pt.t4','B'],positions=[1,1.7,3,3.7,5,5.7,7,7.7])
+    matplotlib.pyplot.ylabel('log$_2$ FC')
+    matplotlib.pyplot.title('bottom outliers')
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/bottom.pdf')
+    matplotlib.pyplot.clf()
+
+    check=scipy.stats.mannwhitneyu(b1,saved)
+    print('negative check',check)
+    
+    return None
+
+def outliersDefiner(x,y,z):
+
+    '''
+    this function detects transcripts with more or lees ribosome occupancy than expected
+    '''
+
+    grid=numpy.linspace(numpy.log10(2),3.9,num=20)
+    means=[]
+    pos=[]
+    devs=[]
+    redIndexes=[]
+    blueIndexes=[]
+    topOutliers=[]; bottomOutliers=[]; backgroundOutliers=[]
+
+    for i in range(len(grid)-1):
+        a=grid[i]; b=grid[i+1]
+        pos.append(numpy.mean([a,b]))
+        cluster=[]
+        for j in range(len(x)):
+            if a<=x[j] and x[j]<=b:
+                cluster.append(y[j])
+        means.append(numpy.mean(cluster))
+        devs.append(numpy.std(cluster))
+
+        canada=numpy.mean(cluster)+numpy.std(cluster)*1.96
+        mexico=numpy.mean(cluster)-numpy.std(cluster)*1.96
+
+        for j in range(len(x)):
+            if a<=x[j] and x[j]<=b:
+                if y[j] > canada:
+                    redIndexes.append(j)
+                    if z[j] not in topOutliers:
+                        topOutliers.append(z[j])
+                elif y[j] < mexico:
+                    blueIndexes.append(j)
+                    if z[j] not in bottomOutliers:
+                        bottomOutliers.append(z[j])
+                else:
+                    if z[j] not in backgroundOutliers:
+                        backgroundOutliers.append(z[j])
+
+    top=numpy.array(means)+numpy.array(devs)*1.96
+    bottom=numpy.array(means)-numpy.array(devs)*1.96
+
+    redx=[x[i] for i in range(len(x)) if i in redIndexes]
+    redy=[y[i] for i in range(len(x)) if i in redIndexes]
+
+    bluex=[x[i] for i in range(len(x)) if i in blueIndexes]
+    bluey=[y[i] for i in range(len(x)) if i in blueIndexes]
+
+    blackx=[x[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
+    blacky=[y[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
+
+    matplotlib.pyplot.plot(blackx,blacky,'ok',alpha=0.1,mew=0)
+
+    matplotlib.pyplot.plot(pos,means,'-g',lw=2)
+    matplotlib.pyplot.plot(pos,top,':g')
+    matplotlib.pyplot.plot(pos,bottom,':g')
+
+    matplotlib.pyplot.plot(redx,redy,'or',mew=0)
+    matplotlib.pyplot.plot(bluex,bluey,'ob',mew=0)
+
+    matplotlib.pyplot.xlim([-0.2,6])
+    matplotlib.pyplot.xlim([-0.2,6])
+    matplotlib.pyplot.xlabel('mRNA log$_{10}$ (TPM+1)')
+    matplotlib.pyplot.ylabel('RBF log$_{10}$ (TPM+1)')
+
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.axes().set_aspect('equal')
+    matplotlib.pyplot.savefig('figures/outliersDistribution.pdf')
+    matplotlib.pyplot.clf()
+
+    return topOutliers,bottomOutliers,backgroundOutliers
 
 def proteomicsReader():
 
@@ -136,6 +371,61 @@ def riboListReader():
     uniqueList=list(set(riboProteins))
 
     return uniqueList
+
+def riboPlotter():
+    
+    for name in ribosomalProteinGenes:
+
+        print(name)
+
+        # defining protein values
+        proteinObservations=[]
+        for ptReplicate in sortedReplicateLabels:
+            series=[0] # manually adding the first value, log2 FC = 0 for first timepoint
+            for ptTimepoint in sortedRelativeTimePointLabels:
+                if name in log2proteome['lysate'][ptReplicate][ptTimepoint].keys(): 
+                    value=log2proteome['lysate'][ptReplicate][ptTimepoint][name]
+                    series.append(value)
+                else:
+                    series.append(float('nan'))
+            proteinObservations.append(series)
+        PO=numpy.array(proteinObservations).T
+        print('protein')
+        print(PO)
+
+        # defining transcript values
+        rnaObservations=[]
+        for replicate in sortedReplicateLabels:
+            series=[0]
+            for tp in sortedRelativeTimePointLabels:
+                value=log2transcriptome['trna'][replicate][tp][name]
+                series.append(value)
+            rnaObservations.append(series)
+        TO=numpy.array(rnaObservations).T
+        print('mRNA')
+        print(TO)
+
+        # actual plotting
+        markers=['o','s','^']
+        theAlpha=0.25
+
+        theColor='blue'
+        matplotlib.pyplot.plot(TP,numpy.mean(PO,1),'-',color=theColor,label='pt',lw=0.5)
+        for j in range(PO.shape[1]):
+            matplotlib.pyplot.plot(TP,PO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
+
+        theColor='red'
+        matplotlib.pyplot.plot(TP,numpy.mean(TO,1),'-',color=theColor,label='mRNA',lw=0.5)
+        for j in range(TO.shape[1]):
+            matplotlib.pyplot.plot(TP,TO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
+
+        figureName='figures/completeRibosomalProteins/test.pdf'.format(name)
+        matplotlib.pyplot.savefig(figureName)
+        #matplotlib.pyplot.clf()
+
+        #sys.exit()
+
+    return None
 
 def staticAnalysis_RNAprotein():
 
@@ -308,6 +598,7 @@ print()
 
 # 1.4. reading ribosomal proteins list
 ribosomalProteinGenes=riboListReader()
+ribosomalProteinGenes.sort()
 
 # 2. building a figure of log2 mRNA versus log2 pt
 #staticAnalysis_RNAprotein()
@@ -369,8 +660,11 @@ for name in consistentNames:
         # plotting
         #individualPlotter(TP,PO,TO,RO,deltaRA,RHO,TLR)
 
-        #sys.exit()
 print(rankFullProteinTrajectories)
+
+# 3.1.1. plotting all information available for ribosomal proteins
+riboPlotter()
+sys.exit()
 
 # 3.2. testing for distribution of affinity in first points
 x=[]
@@ -395,81 +689,18 @@ for name in transcriptomeNames:
         y.append(mF)
         z.append(name)
 
-# defining expectance
-#grid=numpy.linspace(numpy.log10(2),5,num=50)
-#result=pyqt_fit.bootstrap.bootstrap(estimation,x,y,repeats=1000,eval_points=grid,CI = (95,99.9))
-#print('done')
+# defining outliers
+topOutliers,bottomOutliers,backgroundOutliers=outliersDefiner(x,y,z)
 
-grid=numpy.linspace(numpy.log10(2),3.9,num=20)
-means=[]
-pos=[]
-devs=[]
-redIndexes=[]
-blueIndexes=[]
-for i in range(len(grid)-1):
-    a=grid[i]; b=grid[i+1]
-    pos.append(numpy.mean([a,b]))
-    cluster=[]
-    for j in range(len(x)):
-        if a<=x[j] and x[j]<=b:
-            cluster.append(y[j])
-    means.append(numpy.mean(cluster))
-    devs.append(numpy.std(cluster))
-
-    canada=numpy.mean(cluster)+numpy.std(cluster)*1.96
-    mexico=numpy.mean(cluster)-numpy.std(cluster)*1.96
-
-    for j in range(len(x)):
-        if a<=x[j] and x[j]<=b:
-            if y[j] > canada:
-                redIndexes.append(j)
-                print('red',z[j])
-            if y[j] < mexico:
-                blueIndexes.append(j)
-                print('blue',z[j])
-    print(len(cluster))
-
-top=numpy.array(means)+numpy.array(devs)*1.96
-bottom=numpy.array(means)-numpy.array(devs)*1.96
-
-redx=[x[i] for i in range(len(x)) if i in redIndexes]
-redy=[y[i] for i in range(len(x)) if i in redIndexes]
-
-bluex=[x[i] for i in range(len(x)) if i in blueIndexes]
-bluey=[y[i] for i in range(len(x)) if i in blueIndexes]
-
-blackx=[x[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
-blacky=[y[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
-
-matplotlib.pyplot.plot(blackx,blacky,'ok',alpha=0.1,mew=0)
-
-matplotlib.pyplot.plot(pos,means,'-g',lw=2)
-matplotlib.pyplot.plot(pos,top,':g')
-matplotlib.pyplot.plot(pos,bottom,':g')
-
-matplotlib.pyplot.plot(redx,redy,'or',mew=0)
-matplotlib.pyplot.plot(bluex,bluey,'ob',mew=0)
+# are outliers ribosomal genes?
+itop=list(set(topOutliers) & set(ribosomalProteinGenes))
+ibottom=list(set(bottomOutliers) & set(ribosomalProteinGenes))
+print('intersect ribosomal genes and top outliers',itop)
+print('intersect ribosomal genes and bottom outliers',ibottom)
 
 
-#matplotlib.pyplot.plot(grid,result.y_fit(grid),'b',lw=1,label='k0')
+# checking that outliers have different expression behavior in the future
+outliersChecker(topOutliers,bottomOutliers,backgroundOutliers)
 
-#matplotlib.pyplot.plot(grid, result.CIs[0][0,0], 'g--', label='95% CI')
-#matplotlib.pyplot.plot(grid, result.CIs[0][0,1], 'g--', linewidth=2)
 
-#matplotlib.pyplot.plot(grid, result.CIs[0][1,0], 'y--', label='95% CI')
-#matplotlib.pyplot.plot(grid, result.CIs[0][1,1], 'y--', linewidth=2)
-
-#matplotlib.pyplot.plot(grid,k1(grid),'r',lw=2,label='k1')
-#matplotlib.pyplot.plot(grid,k2(grid),'orange',lw=2,label='k2')
-#matplotlib.pyplot.plot(grid,k3(grid),'yellow',lw=2,label='k3')
-
-matplotlib.pyplot.xlim([-0.2,6])
-matplotlib.pyplot.xlim([-0.2,6])
-matplotlib.pyplot.xlabel('mRNA log$_{10}$ (TPM+1)')
-matplotlib.pyplot.ylabel('RBF log$_{10}$ (TPM+1)')
-
-matplotlib.pyplot.tight_layout()
-#matplotlib.pyplot.axes().set_aspect('equal')
-matplotlib.pyplot.savefig('figure.pdf')
-                
-        
+# 
