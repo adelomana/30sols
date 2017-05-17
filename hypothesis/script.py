@@ -390,8 +390,8 @@ def riboPlotter():
                     series.append(float('nan'))
             proteinObservations.append(series)
         PO=numpy.array(proteinObservations).T
-        print('protein')
-        print(PO)
+        if list(numpy.mean(PO,1))[-1] > 0:
+            print(PO)
 
         # defining transcript values
         rnaObservations=[]
@@ -402,8 +402,6 @@ def riboPlotter():
                 series.append(value)
             rnaObservations.append(series)
         TO=numpy.array(rnaObservations).T
-        print('mRNA')
-        print(TO)
 
         # actual plotting
         markers=['o','s','^']
@@ -419,9 +417,12 @@ def riboPlotter():
         for j in range(TO.shape[1]):
             matplotlib.pyplot.plot(TP,TO[:,j],marker=markers[j],color=theColor,lw=0,mew=0,alpha=theAlpha,ms=8)
 
-        figureName='figures/completeRibosomalProteins/test.pdf'.format(name)
+        figureName='figures/completeRibosomalProteins/{}.pdf'.format(name)
+        matplotlib.pyplot.ylabel('log$_2$ FC')
+        matplotlib.pyplot.xlabel('time (h)')
+        matplotlib.pyplot.tight_layout()
         matplotlib.pyplot.savefig(figureName)
-        #matplotlib.pyplot.clf()
+        matplotlib.pyplot.clf()
 
         #sys.exit()
 
@@ -663,8 +664,40 @@ for name in consistentNames:
 print(rankFullProteinTrajectories)
 
 # 3.1.1. plotting all information available for ribosomal proteins
-riboPlotter()
-sys.exit()
+#riboPlotter()
+#sys.exit()
+
+##### scatter plot of log2 FC and tpm
+allX=[]; allY=[]
+allZ=[]
+for name in ribosomalProteinGenes:
+    print(name)
+
+    # defining transcript values
+    for tp in sortedRelativeTimePointLabels:
+        fc=[]; tpm=[]
+        for replicate in sortedReplicateLabels:
+            a=log2transcriptome['trna'][replicate][tp][name]
+            newtp='tp.{}'.format(tp[2])
+            b=rnaExpression['trna'][replicate][newtp][name]
+            fc.append(a)
+            tpm.append(numpy.log10(b+1))
+        x=numpy.mean(tpm); y=numpy.mean(fc)
+    allX.append(x)
+    allY.append(y)
+
+matplotlib.pyplot.plot(allX,allY,'ok',alpha=0.5,mew=0)
+
+matplotlib.pyplot.xlabel('mRNA log$_{10}$ (TPM+1)')
+matplotlib.pyplot.ylabel('mRNA log$_{2}$ FC')
+
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig('figures/scatterTPM_FC.pdf')
+matplotlib.pyplot.clf()
+
+              
+
+#####
 
 # 3.2. testing for distribution of affinity in first points
 x=[]
