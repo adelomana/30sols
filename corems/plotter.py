@@ -235,12 +235,12 @@ def plotter(label,analysedData,sortedConditions):
     matplotlib.pyplot.plot([0,x[-1]],[0,0],ls=':',lw=1,color='black',zorder=0)
     matplotlib.pyplot.grid(alpha=0.3)
     
-    rank=x[-1]; left=-0.0*rank; right=rank+0.0*rank
-    matplotlib.pyplot.xlim([left,right])
+    matplotlib.pyplot.xlim([0,x[-1]])
 
     theFloor=numpy.floor(floor)
     theCeiling=numpy.ceil(ceil)
     matplotlib.pyplot.ylim([theFloor,theCeiling])
+    matplotlib.pyplot.ylim([-3,3])
     
     matplotlib.pyplot.xlabel('condition index')
     matplotlib.pyplot.ylabel('standardized log$_2$ relative expresion')
