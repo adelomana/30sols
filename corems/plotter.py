@@ -254,7 +254,7 @@ def plotter(label,analysedData,sortedConditions):
 dataDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/expressionSelectedCorems/'
 metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/metadata/array_annot.txt'
 expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/halo_egrin2_expression_ratios.txt'
-iterations=1000
+iterations=int(1e4)
 
 # 1. setting expression files
 elements=os.listdir(dataDir)
