@@ -53,15 +53,9 @@ def backgroundComputer():
             medians=numpy.median(W,axis=0)
             q3=numpy.percentile(W,75,axis=0)
 
-            sortedMedians=copy.deepcopy(medians)
-            sortedMedians.sort()
-            sortedIndex=numpy.argsort(medians)
-            bottom=[q1[index] for index in sortedIndex]
-            top=[q3[index] for index in sortedIndex]
-            
-            ensemble['Q1'].append(bottom)
-            ensemble['median'].append(sortedMedians)
-            ensemble['Q3'].append(top)
+            ensemble['Q1'].append(q1)
+            ensemble['median'].append(medians)
+            ensemble['Q3'].append(q3)
                         
         # computing the averages
         background[block]['Q1']=numpy.mean(numpy.array([case for case in ensemble['Q1']]),axis=0)
@@ -198,6 +192,10 @@ def plotter(label,analysedData,sortedConditions):
         bottom=[analysedData[broadCondition]['Q1'][index] for index in sortedIndex]
         top=[analysedData[broadCondition]['Q3'][index] for index in sortedIndex]
 
+        # defining the same order of conditions for background
+        sortedBackgroundBottom=[backgroundBottom[index] for index in sortedIndex]
+        sortedBackgroundTop=[backgroundTop[index] for index in sortedIndex]
+
         # obtaining vertical ranges
         if max(top) > ceil:
             ceil=max(top)
@@ -217,7 +215,7 @@ def plotter(label,analysedData,sortedConditions):
 
         # plotting background
         for i in range(len(x)):
-            matplotlib.pyplot.plot([x[i],x[i]],[backgroundBottom[i],backgroundTop[i]],ls='-',lw=0.355,color='black',alpha=0.1)
+            matplotlib.pyplot.plot([x[i],x[i]],[sortedBackgroundBottom[i],sortedBackgroundTop[i]],ls='-',lw=0.355,color='black',alpha=0.1)
         
         # plotting corem distributions
         for i in range(len(x)):
