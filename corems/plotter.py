@@ -111,11 +111,9 @@ def dataAnalyser(E,conditions):
         analysedData[localCondition]['median'].append(numpy.median(localExpression))
         analysedData[localCondition]['Q3'].append(numpy.percentile(localExpression,75))
         
-    # defining averages per condition
-    broadData={}
-    for condition in analysedData.keys():
-        broadData[condition]=numpy.mean(analysedData[condition]['median'])
-    sortedConditions=sorted(broadData,key=broadData.__getitem__)
+    # defining conditions order alphabetically
+    conditions=list(analysedData.keys())
+    sortedConditions=sorted(conditions,key=str.lower)
 
     return analysedData,sortedConditions
 
