@@ -1,5 +1,6 @@
 import os,sys,numpy,copy
 import matplotlib,matplotlib.pyplot,matplotlib.cm,matplotlib.patches
+import scipy,scipy.stats
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 matplotlib.rcParams['pdf.fonttype']=42
@@ -63,6 +64,100 @@ def backgroundComputer():
         background[block]['Q3']=numpy.mean(numpy.array([case for case in ensemble['Q3']]),axis=0)
 
     return background
+
+def coremAverageTrends(aggregateData):
+
+    '''
+    this function computes the median expression of common conditions for corems of interest.
+    then it computes the percentile-based accumulative distribution to assess patterns of expression differences
+    '''
+
+    ### f.1. data organization
+    # f.1.1. define common conditions
+    coremNames=list(aggregateData.keys())
+    coremNames.sort()
+
+    # f.1.2. define expression for common conditions
+    allConditions=[set(aggregateData[name][1]) for name in coremNames]
+    common=list(set.intersection(*allConditions))
+
+    # f.1.3. obtain median data for common conditions sorting and computing cumulative distribution
+    Z=[]
+    for name in coremNames:
+        W=[]
+        for condition in common:
+            conditionIndex=aggregateData[name][1].index(condition)
+            medianValue=numpy.median(aggregateData[name][0][:,conditionIndex])
+            W.append(medianValue)
+        Z.append(W)
+
+    # f.1.4. sorting expression based on first corem
+    sortedIndexes=numpy.argsort(Z[0])
+
+
+    ### f.2. plots
+    x=[i for i in range(len(sortedIndexes))]
+    # ['1738.txt', '1842.txt', '639.txt', '7469.txt'] should be gene module indexes
+    # 72, 10, 43, 9 should be colors
+    # red, magenta, blue, green
+    theColors=['red','magenta','blue','green']
+    
+    # f.2.1. expression plots
+    figureFile='figures/corem.expression.pdf'
+    for i in range(len(Z)):
+        sortedElements=[Z[i][index] for index in sortedIndexes]
+        matplotlib.pyplot.plot(x,sortedElements,'-',color=theColors[i],alpha=0.5,label=theColors[i],lw=1,zorder=len(Z)-i)
+    matplotlib.pyplot.xlabel('condition')
+    matplotlib.pyplot.ylabel('standardized log$_2$ relative expresion')
+    matplotlib.pyplot.legend(loc=4,ncol=2,fontsize=12)
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureFile)
+    matplotlib.pyplot.clf()
+    
+    # f.2.2. percentile plots
+    figureFile='figures/corem.percentiles.pdf'
+    for i in range(len(Z)):
+        sortedElements=[Z[i][index] for index in sortedIndexes]
+        percentiles=(numpy.argsort(sortedElements)/len(sortedElements))*100
+        matplotlib.pyplot.plot(x,percentiles,'.',color=theColors[i],alpha=0.5,mew=0.,ms=15,label=theColors[i],zorder=len(Z)-i)
+    matplotlib.pyplot.xlabel('condition')
+    matplotlib.pyplot.ylabel('condition percentile')
+    matplotlib.pyplot.legend(loc=4,ncol=2,fontsize=12)
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureFile)
+    matplotlib.pyplot.clf()
+
+    # f.2.3. cumulative plots and KS test
+    figureFile='figures/corem.cumulative.pdf'
+    for i in range(len(Z)):
+        histo,binEdges=numpy.histogram(Z[i],bins=80,range=(-5,3),density=True)
+        halfBin=(binEdges[1]-binEdges[0])/2
+        pos=[element+halfBin for element in binEdges]
+        pos.pop()
+        pdf=histo/sum(histo)
+        cumsum=numpy.cumsum(pdf)
+        matplotlib.pyplot.plot(pos,cumsum,'-',color=theColors[i],label=theColors[i])
+
+        #ksF,pvalueF=scipy.stats.ks_2samp(Z[0],Z[i])
+        #print('KS test | {} corem against red corem: ks={}, p-value={}'.format(theColors[i],ksF,pvalueF))
+
+        #statistic,pvalue=scipy.stats.mannwhitneyu(Z[0],Z[i])
+        #print(statistic,pvalue)
+        
+    matplotlib.pyplot.xlabel('condition')
+    matplotlib.pyplot.ylabel('CDF')
+    matplotlib.pyplot.legend(loc=4,ncol=2,fontsize=12)
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureFile)
+    matplotlib.pyplot.clf()
+
+    print(scipy.stats.kruskal(Z[0],Z[1],Z[2],Z[3]))
+
+    # f.2.4. PCA
+
+    # correlation plots. NB asks for background. compare with noise the rank correlation
+
+    return None
 
 def coremReader(inputFileName):
 
@@ -250,7 +345,7 @@ def plotter(label,analysedData,sortedConditions):
 dataDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/expressionSelectedCorems/'
 metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/metadata/array_annot.txt'
 expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/halo_egrin2_expression_ratios.txt'
-iterations=int(1e4)
+iterations=int(1e1)
 
 # 1. setting expression files
 elements=os.listdir(dataDir)
@@ -266,6 +361,7 @@ fullExpression,allGenes=expressionReader()
 
 # 4. iterating over the corems
 print('working with corems...')
+aggregateData={}
 for case in coremPaths:
 
     print('\t working with corem {}...'.format(case))
@@ -276,21 +372,25 @@ for case in coremPaths:
     print('\t reading data...')
     E,conditions,genes=coremReader(inputFileName)
     print('\t found {} genes.'.format(len(genes)))
+    aggregateData[case]=(E,conditions)
 
     # 4.2. analysing data
-    print('\t analyzing data...')
-    analysedData,sortedConditions=dataAnalyser(E,conditions)
+    #print('\t analyzing data...')
+    #analysedData,sortedConditions=dataAnalyser(E,conditions)
 
     # 4.3. compute background distribution
-    print('\t computing background distribution...')
-    background=backgroundComputer()
+    #print('\t computing background distribution...')
+    #background=backgroundComputer()
     
     # 4.4. plotting data
-    print('\t generating figure...')
-    label=case.split('.txt')[0]
-    plotter(label,analysedData,sortedConditions)
+    #print('\t generating figure...')
+    #label=case.split('.txt')[0]
+    #plotter(label,analysedData,sortedConditions)
 
-    print('')
+    #print('')
 
-# 5. final message
+# 5. working with median profile distributions
+coremAverageTrends(aggregateData)
+
+# 6. final message
 print('... done.')
