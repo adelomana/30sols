@@ -1,6 +1,7 @@
 import os,sys,numpy,copy
 import matplotlib,matplotlib.pyplot,matplotlib.cm,matplotlib.patches
 import scipy,scipy.stats
+import sklearn,sklearn.decomposition,sklearn.manifold
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 matplotlib.rcParams['pdf.fonttype']=42
@@ -73,19 +74,30 @@ def coremAverageTrends(aggregateData):
     '''
 
     ### f.1. data organization
-    # f.1.1. define common conditions
+    # f.1.1. define corem names
     coremNames=list(aggregateData.keys())
     coremNames.sort()
 
-    # f.1.2. define expression for common conditions
+    # f.1.2. define the common conditions in dictionary
     allConditions=[set(aggregateData[name][1]) for name in coremNames]
-    common=list(set.intersection(*allConditions))
+    commons=list(set.intersection(*allConditions))
+
+    commonConditions={}
+    for common in commons:
+        broad=sampleMetadata[common]
+        if broad not in commonConditions.keys():
+            commonConditions[broad]=[common]
+        else:
+            commonConditions[broad].append(common)
+
+    broadConditions=list(commonConditions.keys())
+    sortedBroadConditions=sorted(broadConditions,key=str.lower)
 
     # f.1.3. obtain median data for common conditions sorting and computing cumulative distribution
     Z=[]
     for name in coremNames:
         W=[]
-        for condition in common:
+        for condition in commons:
             conditionIndex=aggregateData[name][1].index(condition)
             medianValue=numpy.median(aggregateData[name][0][:,conditionIndex])
             W.append(medianValue)
@@ -93,7 +105,6 @@ def coremAverageTrends(aggregateData):
 
     # f.1.4. sorting expression based on first corem
     sortedIndexes=numpy.argsort(Z[0])
-
 
     ### f.2. plots
     x=[i for i in range(len(sortedIndexes))]
@@ -127,31 +138,46 @@ def coremAverageTrends(aggregateData):
     matplotlib.pyplot.savefig(figureFile)
     matplotlib.pyplot.clf()
 
-    # f.2.3. cumulative plots and KS test
-    figureFile='figures/corem.cumulative.pdf'
-    for i in range(len(Z)):
-        histo,binEdges=numpy.histogram(Z[i],bins=80,range=(-5,3),density=True)
-        halfBin=(binEdges[1]-binEdges[0])/2
-        pos=[element+halfBin for element in binEdges]
-        pos.pop()
-        pdf=histo/sum(histo)
-        cumsum=numpy.cumsum(pdf)
-        matplotlib.pyplot.plot(pos,cumsum,'-',color=theColors[i],label=theColors[i])
-
-        #ksF,pvalueF=scipy.stats.ks_2samp(Z[0],Z[i])
-        #print('KS test | {} corem against red corem: ks={}, p-value={}'.format(theColors[i],ksF,pvalueF))
-
-        #statistic,pvalue=scipy.stats.mannwhitneyu(Z[0],Z[i])
-        #print(statistic,pvalue)
+    # f.2.3. median expression plot per condition
+    figureFile='figures/coremMediaProfiles.pdf'
+    shift=0
+    
+    for broad in sortedBroadConditions:
+        print(broad)
+        T=[]
+        for name in coremNames:
+            S=[]
+            for specific in commonConditions[broad]:
+                conditionIndex=aggregateData[name][1].index(specific)
+                medianValue=numpy.median(aggregateData[name][0][:,conditionIndex])
+                S.append(medianValue)
+            #W.sort()
+            T.append(S)
         
-    matplotlib.pyplot.xlabel('condition')
-    matplotlib.pyplot.ylabel('CDF')
-    matplotlib.pyplot.legend(loc=4,ncol=2,fontsize=12)
-    matplotlib.pyplot.tight_layout()
+        for i in range(len(T)):
+            x=[i+shift for i in range(len(T[i]))]
+            sortedIndexes=numpy.argsort(T[0])
+            y=[T[i][index] for index in sortedIndexes]
+            matplotlib.pyplot.plot(x,y,'-',color=theColors[i],lw=0.5)
+        
+        shift=shift+len(T[i])
+
+        # calling Kruskal
+        (statistic,pvalue)=scipy.stats.kruskal(T[0],T[1],T[2],T[3])
+        print(statistic,pvalue)
+        if pvalue < 0.05:
+             matplotlib.pyplot.plot([shift],[2.5],'*k')
+            
+    matplotlib.pyplot.ylim([-4.3,3])
+    matplotlib.pyplot.plot([0,shift],[0,0],ls=':',lw=1,color='black',zorder=0)
+    matplotlib.pyplot.grid(alpha=0.3)
+    matplotlib.pyplot.xlabel('condition index')
+    matplotlib.pyplot.ylabel('standardized log$_2$ relative expresion')
+    matplotlib.pyplot.tight_layout(rect=(0,0,1,0.92))
     matplotlib.pyplot.savefig(figureFile)
     matplotlib.pyplot.clf()
 
-    print(scipy.stats.kruskal(Z[0],Z[1],Z[2],Z[3]))
+
 
     # f.2.4. PCA
 
@@ -214,6 +240,10 @@ def dataAnalyser(E,conditions):
 
 def expressionReader():
 
+    '''
+    this function creates a dictionary with all expression values as expression[condition][geneName]=value
+    '''
+
     fullExpression={}
     allGenes=[]
     
@@ -221,10 +251,10 @@ def expressionReader():
         
         header=f.readline()
         vector=header.split('\t')
-        conditions=[element.replace('"','') for element in vector]
-        conditions[-1]=conditions[-1].replace('\n','')
+        allConditions=[element.replace('"','') for element in vector]
+        allConditions[-1]=allConditions[-1].replace('\n','')
 
-        for condition in conditions:
+        for condition in allConditions:
             fullExpression[condition]={}
 
         for line in f:
@@ -234,10 +264,10 @@ def expressionReader():
             allGenes.append(geneName)
             ratios=[float(element) for element in vector[1:]]
 
-            for i in range(len(conditions)):
-                fullExpression[conditions[i]][geneName]=ratios[i]
+            for i in range(len(allConditions)):
+                fullExpression[allConditions[i]][geneName]=ratios[i]
 
-    return fullExpression,allGenes
+    return fullExpression,allGenes,allConditions
 
 def metadataReader():
 
@@ -259,6 +289,157 @@ def metadataReader():
     annotationValues.sort()
 
     return sampleMetadata,annotationValues
+
+def PCAgrapher():
+
+    '''
+    this function builds a PCA plot based on corem expression
+    '''
+
+    theColors=[]; theAlphas=[]
+    # 1. reading gene memberships for corems
+    coremGeneMemberships={}
+    allFiles=os.listdir(allCoremsExpressionDir)
+    coremLabels=[int(element.split('.txt')[0]) for element in allFiles if '.txt' in element]
+    coremLabels.sort()
+        
+    for i in range(len(coremLabels)):
+        
+        if coremLabels[i] in greenLabels:
+            theColors.append('green'); theAlphas.append(.8)
+        elif coremLabels[i] in redLabels:
+            theColors.append('red'); theAlphas.append(.8)
+        elif coremLabels[i] in magentaLabels:
+            theColors.append('magenta'); theAlphas.append(.8)
+        elif coremLabels[i] in blueLabels:
+            theColors.append('blue'); theAlphas.append(.8)
+        else:
+            theColors.append('black'); theAlphas.append(0.1)
+            
+        fileName='{}{}.txt'.format(allCoremsExpressionDir,coremLabels[i])
+        genes=[]
+        with open(fileName,'r') as f:
+            next(f)
+            for line in f:
+                vector=line.split('\t')
+                geneName=vector[0].replace('"','')
+                genes.append(geneName)
+        coremGeneMemberships[coremLabels[i]]=genes
+                
+    # define median expression over all conditions for each corem
+    M=[] # a matrix containing the medians of corems
+    for i in range(len(coremLabels)):
+        X=[]
+        for gene in coremGeneMemberships[coremLabels[i]]:
+            Y=[]
+            for condition in allConditions:
+                Y.append(fullExpression[condition][gene])
+            X.append(Y)
+        Z=numpy.array(X)
+        median=numpy.median(Z,axis=0)
+        M.append(median)
+    N=numpy.array(M)
+
+    # PCA
+    print('running PCA...')
+    pcaMethod=sklearn.decomposition.PCA(n_components=5)
+    pcaObject=pcaMethod.fit(N)
+    new=pcaObject.transform(N)
+    explainedVar=pcaObject.explained_variance_ratio_
+    print('cumsum explained variance...')
+    print(numpy.cumsum(explainedVar))
+
+    for i in range(len(new)):
+        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
+
+    matplotlib.pyplot.xlabel('PCA 1 ({0:.2f} var)'.format(explainedVar[0]))
+    matplotlib.pyplot.ylabel('PCA 2 ({0:.2f} var)'.format(explainedVar[1]))
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/figure.pca.pdf')
+    matplotlib.pyplot.clf()
+    print()
+    
+    # 4.2. t-SNE of samples
+    print('running t-SNE...')
+    tSNE_Method=sklearn.manifold.TSNE(method='exact',verbose=1,init='pca',perplexity=50)
+    tSNE_Object=tSNE_Method.fit(N)
+    new=tSNE_Object.fit_transform(N)
+
+    for i in range(len(new)):
+        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
+    matplotlib.pyplot.xlabel('tSNE 1')
+    matplotlib.pyplot.ylabel('tSNE 2')
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/figure.tSNE.pdf')
+    matplotlib.pyplot.clf()
+    print()
+
+    #### running for only ribosomal corems
+    ####
+    ####
+    theColors=[]; theAlphas=[]
+    for i in range(len(allRiboCorems)):
+        
+        if allRiboCorems[i] in greenLabels:
+            theColors.append('green'); theAlphas.append(.8)
+        elif allRiboCorems[i] in redLabels:
+            theColors.append('red'); theAlphas.append(.8)
+        elif allRiboCorems[i] in magentaLabels:
+            theColors.append('magenta'); theAlphas.append(.8)
+        elif allRiboCorems[i] in blueLabels:
+            theColors.append('blue'); theAlphas.append(.8)
+        else:
+            theColors.append('black'); theAlphas.append(0.1)
+            
+    M=[] # a matrix containing the medians of corems
+    for i in range(len(allRiboCorems)):
+        X=[]
+        for gene in coremGeneMemberships[allRiboCorems[i]]:
+            Y=[]
+            for condition in allConditions:
+                Y.append(fullExpression[condition][gene])
+            X.append(Y)
+        Z=numpy.array(X)
+        median=numpy.median(Z,axis=0)
+        M.append(median)
+    N=numpy.array(M)
+
+    # PCA
+    print('running PCA...')
+    pcaMethod=sklearn.decomposition.PCA(n_components=5)
+    pcaObject=pcaMethod.fit(N)
+    new=pcaObject.transform(N)
+    explainedVar=pcaObject.explained_variance_ratio_
+    print('cumsum explained variance...')
+    print(numpy.cumsum(explainedVar))
+
+    for i in range(len(new)):
+        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
+
+    matplotlib.pyplot.xlabel('PCA 1 ({0:.2f} var)'.format(explainedVar[0]))
+    matplotlib.pyplot.ylabel('PCA 2 ({0:.2f} var)'.format(explainedVar[1]))
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/figure.pca.ribo.pdf')
+    matplotlib.pyplot.clf()
+    print()
+    
+    # 4.2. t-SNE of samples
+    print('running t-SNE...')
+    tSNE_Method=sklearn.manifold.TSNE(method='exact',verbose=1,init='pca',perplexity=5)
+    tSNE_Object=tSNE_Method.fit(N)
+    new=tSNE_Object.fit_transform(N)
+
+    for i in range(len(new)):
+        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
+    matplotlib.pyplot.xlabel('tSNE 1')
+    matplotlib.pyplot.ylabel('tSNE 2')
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig('figures/figure.tSNE.ribo.pdf')
+    matplotlib.pyplot.clf()
+    print()
+
+
+    return None
 
 def plotter(label,analysedData,sortedConditions):
 
@@ -342,10 +523,17 @@ def plotter(label,analysedData,sortedConditions):
     return None
 
 # 0. user define variables
+allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/allCorems/'
 dataDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/expressionSelectedCorems/'
 metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/metadata/array_annot.txt'
 expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/halo_egrin2_expression_ratios.txt'
 iterations=int(1e1)
+
+greenLabels=[8655,12578,7474,7473,20960,20806,7469]
+redLabels=[14306,2822,9692,21843,7884,4320,29824,21846,3882,17167,7870,3570,4317,472,2383,2887,20778,3415,8640,7321,1738]
+magentaLabels=[1842,8639,4277,4084,3418,1852,1845,1841,1837,1674,1808,2978,8630,753,7317,20780,3403,2980,3597,3428,3278,31951,2976,21855,0,1143]
+blueLabels=[21857,3404,7316,20779,639,3280,164,31942]
+allRiboCorems=greenLabels+redLabels+magentaLabels+blueLabels
 
 # 1. setting expression files
 elements=os.listdir(dataDir)
@@ -357,7 +545,7 @@ sampleMetadata,annotationValues=metadataReader()
 
 # 3. reading full expression data
 print('reading expression data...')
-fullExpression,allGenes=expressionReader()
+fullExpression,allGenes,allConditions=expressionReader()
 
 # 4. iterating over the corems
 print('working with corems...')
@@ -390,7 +578,11 @@ for case in coremPaths:
     #print('')
 
 # 5. working with median profile distributions
-coremAverageTrends(aggregateData)
+#coremAverageTrends(aggregateData)
+
+PCAgrapher()
+
+#exhaustiveChecker()
 
 # 6. final message
 print('... done.')
