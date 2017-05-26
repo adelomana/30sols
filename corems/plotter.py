@@ -290,14 +290,15 @@ def metadataReader():
 
     return sampleMetadata,annotationValues
 
-def PCAgrapher():
+def dimensionalityReductionAnalyses():
 
     '''
-    this function builds a PCA plot based on corem expression
+    this function computes PCA and tSNE for specified corems a PCA plot based on corem expression
     '''
 
+    # 1. working with all corems
     theColors=[]; theAlphas=[]
-    # 1. reading gene memberships for corems
+    # 1.1. reading gene memberships for corems
     coremGeneMemberships={}
     allFiles=os.listdir(allCoremsExpressionDir)
     coremLabels=[int(element.split('.txt')[0]) for element in allFiles if '.txt' in element]
@@ -326,7 +327,7 @@ def PCAgrapher():
                 genes.append(geneName)
         coremGeneMemberships[coremLabels[i]]=genes
                 
-    # define median expression over all conditions for each corem
+    # 1.2. define median expression over all conditions for each corem
     M=[] # a matrix containing the medians of corems
     for i in range(len(coremLabels)):
         X=[]
@@ -340,43 +341,18 @@ def PCAgrapher():
         M.append(median)
     N=numpy.array(M)
 
-    # PCA
-    print('running PCA...')
-    pcaMethod=sklearn.decomposition.PCA(n_components=5)
-    pcaObject=pcaMethod.fit(N)
-    new=pcaObject.transform(N)
-    explainedVar=pcaObject.explained_variance_ratio_
-    print('cumsum explained variance...')
-    print(numpy.cumsum(explainedVar))
-
-    for i in range(len(new)):
-        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
-
-    matplotlib.pyplot.xlabel('PCA 1 ({0:.2f} var)'.format(explainedVar[0]))
-    matplotlib.pyplot.ylabel('PCA 2 ({0:.2f} var)'.format(explainedVar[1]))
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig('figures/figure.pca.pdf')
-    matplotlib.pyplot.clf()
-    print()
+    # 1.3. PCA
+    figureFile='figures/figure.pca.pdf'
+    perplexityValue=50
+    pcaCaller(N,theColors,theAlphas,figureFile)
     
-    # 4.2. t-SNE of samples
-    print('running t-SNE...')
-    tSNE_Method=sklearn.manifold.TSNE(method='exact',verbose=1,init='pca',perplexity=50)
-    tSNE_Object=tSNE_Method.fit(N)
-    new=tSNE_Object.fit_transform(N)
+    # 1.4. t-SNE 
+    figureFile='figures/figure.tSNE.pdf'
+    perplexityValue=50
+    tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
 
-    for i in range(len(new)):
-        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
-    matplotlib.pyplot.xlabel('tSNE 1')
-    matplotlib.pyplot.ylabel('tSNE 2')
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig('figures/figure.tSNE.pdf')
-    matplotlib.pyplot.clf()
-    print()
 
-    #### running for only ribosomal corems
-    ####
-    ####
+    # 2. only ribosomal corems
     theColors=[]; theAlphas=[]
     for i in range(len(allRiboCorems)):
         
@@ -404,7 +380,19 @@ def PCAgrapher():
         M.append(median)
     N=numpy.array(M)
 
-    # PCA
+    # 2.1. PCA
+    figureFile='figures/figure.pca.ribo.pdf'
+    pcaCaller(N,theColors,theAlphas,figureFile)
+    
+    # 2.2. t-SNE 
+    figureFile='figures/figure.tSNE.ribo.pdf'
+    perplexityValue=5
+    tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
+    
+    return None
+
+def pcaCaller(N,theColors,theAlphas,figureFile):
+    
     print('running PCA...')
     pcaMethod=sklearn.decomposition.PCA(n_components=5)
     pcaObject=pcaMethod.fit(N)
@@ -419,25 +407,9 @@ def PCAgrapher():
     matplotlib.pyplot.xlabel('PCA 1 ({0:.2f} var)'.format(explainedVar[0]))
     matplotlib.pyplot.ylabel('PCA 2 ({0:.2f} var)'.format(explainedVar[1]))
     matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig('figures/figure.pca.ribo.pdf')
+    matplotlib.pyplot.savefig(figureFile)
     matplotlib.pyplot.clf()
     print()
-    
-    # 4.2. t-SNE of samples
-    print('running t-SNE...')
-    tSNE_Method=sklearn.manifold.TSNE(method='exact',verbose=1,init='pca',perplexity=5)
-    tSNE_Object=tSNE_Method.fit(N)
-    new=tSNE_Object.fit_transform(N)
-
-    for i in range(len(new)):
-        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
-    matplotlib.pyplot.xlabel('tSNE 1')
-    matplotlib.pyplot.ylabel('tSNE 2')
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig('figures/figure.tSNE.ribo.pdf')
-    matplotlib.pyplot.clf()
-    print()
-
 
     return None
 
@@ -522,6 +494,24 @@ def plotter(label,analysedData,sortedConditions):
 
     return None
 
+def tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue):
+
+    print('running t-SNE...')
+    tSNE_Method=sklearn.manifold.TSNE(method='exact',verbose=1,init='pca',perplexity=perplexityValue)
+    tSNE_Object=tSNE_Method.fit(N)
+    new=tSNE_Object.fit_transform(N)
+
+    for i in range(len(new)):
+        matplotlib.pyplot.scatter(new[i,0],new[i,1],c=theColors[i],alpha=theAlphas[i],s=60,lw=0)
+    matplotlib.pyplot.xlabel('tSNE 1')
+    matplotlib.pyplot.ylabel('tSNE 2')
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureFile)
+    matplotlib.pyplot.clf()
+    print()
+
+    return None
+
 # 0. user define variables
 allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/allCorems/'
 dataDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/expressionSelectedCorems/'
@@ -577,12 +567,14 @@ for case in coremPaths:
 
     #print('')
 
-# 5. working with median profile distributions
+# 5. working with corem median profiles
 #coremAverageTrends(aggregateData)
 
-PCAgrapher()
+# 6. dimensionality reduction analyses
+dimensionalityReductionAnalyses()
 
-#exhaustiveChecker()
+# 7. condition-specific finder
+#exhaustiveDifferencesFinder()
 
 # 6. final message
 print('... done.')
