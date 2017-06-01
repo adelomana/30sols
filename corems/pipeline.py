@@ -1,4 +1,4 @@
-import os,sys,numpy,copy
+import os,sys,numpy,copy,pickle
 import matplotlib,matplotlib.pyplot,matplotlib.cm,matplotlib.patches
 import scipy,scipy.stats
 import sklearn,sklearn.decomposition,sklearn.manifold
@@ -177,12 +177,6 @@ def coremAverageTrends(aggregateData):
     matplotlib.pyplot.savefig(figureFile)
     matplotlib.pyplot.clf()
 
-
-
-    # f.2.4. PCA
-
-    # correlation plots. NB asks for background. compare with noise the rank correlation
-
     return None
 
 def coremReader(inputFileName):
@@ -238,57 +232,85 @@ def dataAnalyser(E,conditions):
 
     return analysedData,sortedConditions
 
-def expressionReader():
+def differencesAssessment(block,theColors):
 
     '''
-    this function creates a dictionary with all expression values as expression[condition][geneName]=value
+    this function computes a matrix of differences for clusters of corems for a particular condition
     '''
 
-    fullExpression={}
-    allGenes=[]
+    print('\t{}...'.format(block))
+
+    # define working conditions
+    workingConditions=[]
+    for specific in sampleMetadata:
+        if sampleMetadata[specific] == block:
+            workingConditions.append(specific)
     
-    with open(expressionDataFile,'r') as f:
-        
-        header=f.readline()
-        vector=header.split('\t')
-        allConditions=[element.replace('"','') for element in vector]
-        allConditions[-1]=allConditions[-1].replace('\n','')
-
-        for condition in allConditions:
-            fullExpression[condition]={}
-
-        for line in f:
-            vector=line.split('\t')
-
-            geneName=vector[0].replace('"','')
-            allGenes.append(geneName)
-            ratios=[float(element) for element in vector[1:]]
-
-            for i in range(len(allConditions)):
-                fullExpression[allConditions[i]][geneName]=ratios[i]
-
-    return fullExpression,allGenes,allConditions
-
-def metadataReader():
-
-    sampleMetadata={}
-    annotationValues=[]
+    # iterate over corems
+    F=numpy.empty([len(theColors),len(theColors)])
     
-    with open(metadataFile,'r') as f:
-        next(f)
-        next(f)
-        for line in f:
-            vector=line.split('\t')
-            sampleName=vector[0]
-            annotation=vector[1]
-            sampleMetadata[sampleName]=annotation
+    for i in range(len(theColors)):
+        for j in range(len(theColors)):
+            if i<=j:
+                color1=theColors[i]
+                color2=theColors[j]
+                
+                # define corems
+                coremsA=clusteredCorems[color1]
+                coremsB=clusteredCorems[color2]
 
-            if annotation not in annotationValues:
-                annotationValues.append(annotation)
+                # define frequency of differences
+                foundDifferences=0
+                maxRankDifferences=0
+                
+                for coremA in coremsA:
+                    for coremB in coremsB:
 
-    annotationValues.sort()
+                        # obtain median expression for coremA
+                        X=[]
+                        genesA=coremGeneMemberships[coremA]
+                        for gene in genesA:
+                            Y=[]
+                            for condition in workingConditions:
+                                Y.append(fullExpression[condition][gene])
+                            X.append(Y)
+                        Z=numpy.array(X)
+                        medianA=numpy.median(Z,axis=0)
 
-    return sampleMetadata,annotationValues
+                        # obtain median expression for coremB
+                        X=[]
+                        genesB=coremGeneMemberships[coremB]
+                        for gene in genesB:
+                            Y=[]
+                            for condition in workingConditions:
+                                Y.append(fullExpression[condition][gene])
+                            X.append(Y)
+                        Z=numpy.array(X)
+                        medianB=numpy.median(Z,axis=0)
+
+                        maxRankDifferences=maxRankDifferences+1
+                        # test for the difference between them: KS                        
+                        D,pvalue=scipy.stats.ks_2samp(medianA,medianB)
+                        if pvalue < 0.05:
+                            foundDifferences=foundDifferences+1
+
+                        # computing background
+                        #print(len(allGenes))
+                        #sys.exit()
+
+                        # test for differences: Spearman rank
+                        #correlation,pvalue=scipy.stats.spearmanr(medianA,medianB)                       
+                        #if correlation > 0. and pvalue < 0.05: 
+                        #    pass
+                        #else:
+                        #    foundDifferences=foundDifferences+1
+                            
+                # define similarity
+                similarity=1-(foundDifferences/maxRankDifferences)
+                F[i,j]=similarity
+                F[j,i]=similarity
+                    
+    return F
 
 def dimensionalityReductionAnalyses():
 
@@ -298,34 +320,20 @@ def dimensionalityReductionAnalyses():
 
     # 1. working with all corems
     theColors=[]; theAlphas=[]
-    # 1.1. reading gene memberships for corems
-    coremGeneMemberships={}
     allFiles=os.listdir(allCoremsExpressionDir)
     coremLabels=[int(element.split('.txt')[0]) for element in allFiles if '.txt' in element]
     coremLabels.sort()
-        
-    for i in range(len(coremLabels)):
-        
-        if coremLabels[i] in greenLabels:
-            theColors.append('green'); theAlphas.append(.8)
-        elif coremLabels[i] in redLabels:
-            theColors.append('red'); theAlphas.append(.8)
-        elif coremLabels[i] in magentaLabels:
-            theColors.append('magenta'); theAlphas.append(.8)
-        elif coremLabels[i] in blueLabels:
-            theColors.append('blue'); theAlphas.append(.8)
-        else:
-            theColors.append('black'); theAlphas.append(0.1)
-            
-        fileName='{}{}.txt'.format(allCoremsExpressionDir,coremLabels[i])
-        genes=[]
-        with open(fileName,'r') as f:
-            next(f)
-            for line in f:
-                vector=line.split('\t')
-                geneName=vector[0].replace('"','')
-                genes.append(geneName)
-        coremGeneMemberships[coremLabels[i]]=genes
+    
+    if coremLabels[i] in greenLabels:
+        theColors.append('green'); theAlphas.append(.8)
+    elif coremLabels[i] in redLabels:
+        theColors.append('red'); theAlphas.append(.8)
+    elif coremLabels[i] in magentaLabels:
+        theColors.append('magenta'); theAlphas.append(.8)
+    elif coremLabels[i] in blueLabels:
+        theColors.append('blue'); theAlphas.append(.8)
+    else:
+        theColors.append('black'); theAlphas.append(0.1)
                 
     # 1.2. define median expression over all conditions for each corem
     M=[] # a matrix containing the medians of corems
@@ -343,14 +351,12 @@ def dimensionalityReductionAnalyses():
 
     # 1.3. PCA
     figureFile='figures/figure.pca.pdf'
-    perplexityValue=50
     pcaCaller(N,theColors,theAlphas,figureFile)
     
     # 1.4. t-SNE 
     figureFile='figures/figure.tSNE.pdf'
     perplexityValue=50
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
-
 
     # 2. only ribosomal corems
     theColors=[]; theAlphas=[]
@@ -391,7 +397,147 @@ def dimensionalityReductionAnalyses():
     
     return None
 
+def exhaustiveDifferencesFinder():
+
+    '''
+    this function computes the frequency of differences between corems of different clusters (colors)
+    '''
+
+    theColors=['red','magenta','blue','green']
+    similarityJar=jarDir+'similarity.pickle'
+
+    """
+    # compute and store similarity based on KS
+    similarity={}
+    for block in sortedBlockConditions:
+        # compute the matrix of differences for that particular condition
+        F=differencesAssessment(block,theColors)
+        similarity[block]=F
+
+    f=open(similarityJar,'wb')
+    pickle.dump(similarity,f)
+    f.close()
+    """
+
+    # recover similarity
+    f=open(similarityJar,'rb')
+    similarity=pickle.load(f)
+    f.close()
+
+    # preparing data to plot
+    for i in range(len(sortedBlockConditions)):
+        block=sortedBlockConditions[i]
+        if i == 0:
+            G=similarity[block]
+        else:
+            G=numpy.hstack((G,similarity[block]))
+
+    # plotting figure
+    figureName='figures/similarity.png'
+    
+    matplotlib.pyplot.imshow(G,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
+
+    cb=matplotlib.pyplot.colorbar(label='similarity',orientation='horizontal',fraction=0.025) 
+    cb.ax.tick_params(labelsize=10)
+
+    positions=[(i*4)-0.5 for i in range(18)]
+    values=[str(int(element+0.5)) for element in positions]
+    
+    matplotlib.pyplot.xticks(positions,values,size=10)
+    matplotlib.pyplot.yticks([],[])
+    
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureName)
+    matplotlib.pyplot.clf()
+    
+
+    return None
+
+def expressionReader():
+
+    '''
+    this function creates a dictionary with all expression values as expression[condition][geneName]=value
+    '''
+
+    fullExpression={}
+    allGenes=[]
+    
+    with open(expressionDataFile,'r') as f:
+        
+        header=f.readline()
+        vector=header.split('\t')
+        allConditions=[element.replace('"','') for element in vector]
+        allConditions[-1]=allConditions[-1].replace('\n','')
+
+        for condition in allConditions:
+            fullExpression[condition]={}
+
+        for line in f:
+            vector=line.split('\t')
+
+            geneName=vector[0].replace('"','')
+            allGenes.append(geneName)
+            ratios=[float(element) for element in vector[1:]]
+
+            for i in range(len(allConditions)):
+                fullExpression[allConditions[i]][geneName]=ratios[i]
+
+    return fullExpression,allGenes,allConditions
+
+def geneMembershipReader():
+
+    '''
+    this function reads the gene members of selected corems
+    '''
+
+    coremGeneMemberships={}
+    allFiles=os.listdir(allCoremsExpressionDir)
+    coremLabels=[int(element.split('.txt')[0]) for element in allFiles if '.txt' in element]
+    coremLabels.sort()
+        
+    for i in range(len(coremLabels)):
+        fileName='{}{}.txt'.format(allCoremsExpressionDir,coremLabels[i])
+        genes=[]
+        with open(fileName,'r') as f:
+            next(f)
+            for line in f:
+                vector=line.split('\t')
+                geneName=vector[0].replace('"','')
+                genes.append(geneName)
+        coremGeneMemberships[coremLabels[i]]=genes
+            
+    return coremGeneMemberships
+
+def metadataReader():
+
+    '''
+    this function reads the metadata
+    '''
+
+    sampleMetadata={}
+    annotationValues=[]
+    
+    with open(metadataFile,'r') as f:
+        next(f)
+        next(f)
+        for line in f:
+            vector=line.split('\t')
+            sampleName=vector[0]
+            annotation=vector[1]
+            sampleMetadata[sampleName]=annotation
+
+            if annotation not in annotationValues:
+                annotationValues.append(annotation)
+
+    annotationValues.sort()
+
+    return sampleMetadata,annotationValues
+
 def pcaCaller(N,theColors,theAlphas,figureFile):
+
+    '''
+    this function makes a PCA and its figure
+    '''
     
     print('running PCA...')
     pcaMethod=sklearn.decomposition.PCA(n_components=5)
@@ -413,7 +559,7 @@ def pcaCaller(N,theColors,theAlphas,figureFile):
 
     return None
 
-def plotter(label,analysedData,sortedConditions):
+def plotter(label,analysedData,sortedBlockConditions):
 
     figureFile='figures/{}.{}.pdf'.format(label,iterations)
     customMap=matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax=20),cmap='tab20')
@@ -422,24 +568,26 @@ def plotter(label,analysedData,sortedConditions):
     legendHandles=[]
     
     # selecting the sorted conditions
-    for broadCondition in sortedConditions:
+    for block in sortedBlockConditions:
+
+        print(broadCondition)
 
         # defining background values
-        backgroundBottom=background[broadCondition]['Q1']
-        backgroundTop=background[broadCondition]['Q3']
+        backgroundBottom=background[block]['Q1']
+        backgroundTop=background[block]['Q3']
 
         # sorting the medians
-        medians=analysedData[broadCondition]['median']
+        medians=analysedData[block]['median']
         sortedMedians=copy.deepcopy(medians)
         sortedMedians.sort()
 
         # obtaining the sorted quantiles
         sortedIndex=numpy.argsort(medians)
-        bottom=[analysedData[broadCondition]['Q1'][index] for index in sortedIndex]
-        top=[analysedData[broadCondition]['Q3'][index] for index in sortedIndex]
+        bottom=[analysedData[block]['Q1'][index] for index in sortedIndex]
+        top=[analysedData[block]['Q3'][index] for index in sortedIndex]
 
         # defining the same order of conditions for background
-        sortedBackgroundBottom=[backgroundBottom[index] for index in sortedIndex]
+        sortedBackgroundBottom=[block[index] for index in sortedIndex]
         sortedBackgroundTop=[backgroundTop[index] for index in sortedIndex]
 
         # obtaining vertical ranges
@@ -449,7 +597,7 @@ def plotter(label,analysedData,sortedConditions):
             floor=min(bottom)
     
         # obtaining the color and legend handles
-        selectedIndex=sortedConditions.index(broadCondition)
+        selectedIndex=sortedConditions.index(block)
         if selectedIndex >= 14: # avoiding grey colors, indexes 14 and 15
             selectedIndex=selectedIndex+2
         theColor=customMap.to_rgba(selectedIndex)
@@ -513,31 +661,36 @@ def tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue):
     return None
 
 # 0. user define variables
-allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/allCorems/'
-dataDir='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/expressionSelectedCorems/'
-metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/metadata/array_annot.txt'
-expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HaloEGRIN/halo_egrin2_expression_ratios.txt'
+allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/allCorems/'
+dataDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/expressionSelectedCorems/'
+metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/metadata/array_annot.txt'
+expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/halo_egrin2_expression_ratios.txt'
+jarDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/jars'
 iterations=int(1e1)
 
-greenLabels=[8655,12578,7474,7473,20960,20806,7469]
-redLabels=[14306,2822,9692,21843,7884,4320,29824,21846,3882,17167,7870,3570,4317,472,2383,2887,20778,3415,8640,7321,1738]
-magentaLabels=[1842,8639,4277,4084,3418,1852,1845,1841,1837,1674,1808,2978,8630,753,7317,20780,3403,2980,3597,3428,3278,31951,2976,21855,0,1143]
-blueLabels=[21857,3404,7316,20779,639,3280,164,31942]
-allRiboCorems=greenLabels+redLabels+magentaLabels+blueLabels
+clusteredCorems={}
+clusteredCorems['green']=[8655,12578,7474,7473,20960,20806,7469]
+clusteredCorems['red']=[14306,2822,9692,21843,7884,4320,29824,21846,3882,17167,7870,3570,4317,472,2383,2887,20778,3415,8640,7321,1738]
+clusteredCorems['magenta']=[1842,8639,4277,4084,3418,1852,1845,1841,1837,1674,1808,2978,8630,753,7317,20780,3403,2980,3597,3428,3278,31951,2976,21855,0,1143]
+clusteredCorems['blue']=[21857,3404,7316,20779,639,3280,164,31942]
 
-# 1. setting expression files
+# 1. reading data
+# 1.1. setting expression files
 elements=os.listdir(dataDir)
 coremPaths=[element for element in elements if '.txt' in element]
 coremPaths.sort()
 
-# 2. reading sample metadata
+# 1.2. reading sample metadata
 sampleMetadata,annotationValues=metadataReader()
 
-# 3. reading full expression data
+# 1.3. reading full expression data
 print('reading expression data...')
 fullExpression,allGenes,allConditions=expressionReader()
 
-# 4. iterating over the corems
+# 1.4. reading corem gene memberships for clustered ones
+coremGeneMemberships=geneMembershipReader()
+
+# 2. iterating over specific corems
 print('working with corems...')
 aggregateData={}
 for case in coremPaths:
@@ -546,35 +699,36 @@ for case in coremPaths:
     
     inputFileName=dataDir+case
 
-    # 4.1. reading data
+    # 2.1. reading data
     print('\t reading data...')
     E,conditions,genes=coremReader(inputFileName)
     print('\t found {} genes.'.format(len(genes)))
     aggregateData[case]=(E,conditions)
 
-    # 4.2. analysing data
-    #print('\t analyzing data...')
-    #analysedData,sortedConditions=dataAnalyser(E,conditions)
+    # 2.2. analysing data
+    print('\t analyzing data...')
+    analysedData,sortedBlockConditions=dataAnalyser(E,conditions)
 
-    # 4.3. compute background distribution
+    # 2.3. compute background distribution
     #print('\t computing background distribution...')
     #background=backgroundComputer()
     
-    # 4.4. plotting data
+    # 2.4. plotting data
     #print('\t generating figure...')
     #label=case.split('.txt')[0]
-    #plotter(label,analysedData,sortedConditions)
+    #plotter(label,analysedData,sortedBlockConditions)
 
-    #print('')
+    print('')
 
-# 5. working with corem median profiles
+# 3. working with corem median profiles
 #coremAverageTrends(aggregateData)
 
-# 6. dimensionality reduction analyses
-dimensionalityReductionAnalyses()
+# 4. dimensionality reduction analyses
+#dimensionalityReductionAnalyses()
 
-# 7. condition-specific finder
-#exhaustiveDifferencesFinder()
+# 5. condition-specific finder
+print('computing differences between clusters of corems at specific conditions...')
+exhaustiveDifferencesFinder()
 
 # 6. final message
 print('... done.')
