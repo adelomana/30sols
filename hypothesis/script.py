@@ -670,7 +670,9 @@ print(rankFullProteinTrajectories)
 ##### scatter plot of log2 FC and tpm
 allX=[]; allY=[]
 allZ=[]
+
 for name in ribosomalProteinGenes:
+
     print(name)
 
     # defining transcript values
