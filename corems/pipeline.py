@@ -235,7 +235,7 @@ def dataAnalyser(E,conditions):
 def differencesAssessment(block,theColors):
 
     '''
-    this function computes a matrix of differences for clusters of corems for a particular condition
+    this function checks that the size of a block is appropriate
     '''
 
     print('\t{}...'.format(block))
@@ -245,72 +245,15 @@ def differencesAssessment(block,theColors):
     for specific in sampleMetadata:
         if sampleMetadata[specific] == block:
             workingConditions.append(specific)
-    
-    # iterate over corems
+
+    # compute F and G
     F=numpy.empty([len(theColors),len(theColors)])
-    
-    for i in range(len(theColors)):
-        for j in range(len(theColors)):
-            if i<=j:
-                color1=theColors[i]
-                color2=theColors[j]
-                
-                # define corems
-                coremsA=clusteredCorems[color1]
-                coremsB=clusteredCorems[color2]
+    G=numpy.empty([len(theColors),len(theColors)])
 
-                # define frequency of differences
-                foundDifferences=0
-                maxRankDifferences=0
-                
-                for coremA in coremsA:
-                    for coremB in coremsB:
-
-                        # obtain median expression for coremA
-                        X=[]
-                        genesA=coremGeneMemberships[coremA]
-                        for gene in genesA:
-                            Y=[]
-                            for condition in workingConditions:
-                                Y.append(fullExpression[condition][gene])
-                            X.append(Y)
-                        Z=numpy.array(X)
-                        medianA=numpy.median(Z,axis=0)
-
-                        # obtain median expression for coremB
-                        X=[]
-                        genesB=coremGeneMemberships[coremB]
-                        for gene in genesB:
-                            Y=[]
-                            for condition in workingConditions:
-                                Y.append(fullExpression[condition][gene])
-                            X.append(Y)
-                        Z=numpy.array(X)
-                        medianB=numpy.median(Z,axis=0)
-
-                        maxRankDifferences=maxRankDifferences+1
-                        # test for the difference between them: KS                        
-                        D,pvalue=scipy.stats.ks_2samp(medianA,medianB)
-                        if pvalue < 0.05:
-                            foundDifferences=foundDifferences+1
-
-                        # computing background
-                        #print(len(allGenes))
-                        #sys.exit()
-
-                        # test for differences: Spearman rank
-                        #correlation,pvalue=scipy.stats.spearmanr(medianA,medianB)                       
-                        #if correlation > 0. and pvalue < 0.05: 
-                        #    pass
-                        #else:
-                        #    foundDifferences=foundDifferences+1
-                            
-                # define similarity
-                similarity=1-(foundDifferences/maxRankDifferences)
-                F[i,j]=similarity
-                F[j,i]=similarity
+    if len(workingConditions) > 50:
+        F,G=similarityMatrixComputer(block,theColors,workingConditions,F,G)
                     
-    return F
+    return F,G,len(workingConditions)
 
 def dimensionalityReductionAnalyses():
 
@@ -406,51 +349,30 @@ def exhaustiveDifferencesFinder():
     theColors=['red','magenta','blue','green']
     similarityJar=jarDir+'similarity.pickle'
 
-    """
     # compute and store similarity based on KS
-    similarity={}
+    similarityKS={}
+    similaritySC={}
+    conditionsSizes={}
     for block in sortedBlockConditions:
         # compute the matrix of differences for that particular condition
-        F=differencesAssessment(block,theColors)
-        similarity[block]=F
-
+        F,G,conditionSize=differencesAssessment(block,theColors)
+        if F.size != 0:
+            similarityKS[block]=F
+            similaritySC[block]=G
+            conditionsSizes[block]=conditionSize
+    similarities=[similarityKS,similaritySC,conditionsSizes]
     f=open(similarityJar,'wb')
-    pickle.dump(similarity,f)
+    pickle.dump(similarities,f)
     f.close()
-    """
-
+    
     # recover similarity
     f=open(similarityJar,'rb')
-    similarity=pickle.load(f)
+    similarities=pickle.load(f)
     f.close()
 
-    # preparing data to plot
-    for i in range(len(sortedBlockConditions)):
-        block=sortedBlockConditions[i]
-        if i == 0:
-            G=similarity[block]
-        else:
-            G=numpy.hstack((G,similarity[block]))
-
-    # plotting figure
-    figureName='figures/similarity.png'
+    # plot a heat map with similarities
+    heatmapSimilaritiesPlotter(similarities)
     
-    matplotlib.pyplot.imshow(G,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
-
-    cb=matplotlib.pyplot.colorbar(label='similarity',orientation='horizontal',fraction=0.025) 
-    cb.ax.tick_params(labelsize=10)
-
-    positions=[(i*4)-0.5 for i in range(18)]
-    values=[str(int(element+0.5)) for element in positions]
-    
-    matplotlib.pyplot.xticks(positions,values,size=10)
-    matplotlib.pyplot.yticks([],[])
-    
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig(figureName)
-    matplotlib.pyplot.clf()
-    
-
     return None
 
 def expressionReader():
@@ -507,6 +429,68 @@ def geneMembershipReader():
         coremGeneMemberships[coremLabels[i]]=genes
             
     return coremGeneMemberships
+
+def heatmapSimilaritiesPlotter(similarities):
+
+    '''
+    this function plots a heatmap of similarity indexes, both for Kolmogorov-Smirnov-based and Spearman Coefficient-based similarities
+    '''
+
+    methodLabels=['ks','sc']
+    computedBlocks=list(similarities[0].keys())
+    conditionsSizes=similarities[2]
+    
+    for i in range(len(methodLabels)):
+
+        # sorting conditions from high similarity to low
+        similarityOrder={}
+        
+        for block in computedBlocks:
+            B=similarities[i][block]
+            print(B.shape)
+            print(B)
+            print(numpy.mean(B))
+            similarityOrder[block]=numpy.mean(B)
+
+        sortedComputedBlockCondition=sorted(similarityOrder.values())
+        print(similarityOrder)
+        for block in sortedComputedBlockCondition:
+            print(block,sortedComputedBlockCondition[block])
+
+        sys.exit()
+
+        for j in range(len(sortedBlockConditions)):
+            block=sortedBlockConditions[j]
+            if j == 0:
+                G=similarities[i][block]
+            else:
+                G=numpy.hstack((G,similarities[i][block]))
+
+        # plotting figure
+        figureName='figures/similarity.{}.png'.format(methodLabels[i])
+    
+        matplotlib.pyplot.imshow(G,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
+
+        cb=matplotlib.pyplot.colorbar(label='similarity',orientation='horizontal',fraction=0.025) 
+        cb.ax.tick_params(labelsize=10)
+
+        positions=[(i*4)-0.5 for i in range(18)]
+        values=[str(int(element+0.5)) for element in positions]
+        matplotlib.pyplot.xticks(positions,values,size=10)
+        matplotlib.pyplot.yticks([],[])
+
+        for j in range(len(sortedBlockConditions)):
+            xpos=2+j*4
+            ypos=-1
+            
+            label='{} n={}'.format(sortedBlockConditions[j],conditionsSizes[sortedBlockConditions[j]])
+            matplotlib.pyplot.text(xpos,ypos,label,rotation=90,horizontalalignment='center',verticalalignment='bottom')
+    
+        matplotlib.pyplot.tight_layout()
+        matplotlib.pyplot.savefig(figureName)
+        matplotlib.pyplot.clf()
+
+    return None
 
 def metadataReader():
 
@@ -641,6 +625,108 @@ def plotter(label,analysedData,sortedBlockConditions):
     matplotlib.pyplot.clf()
 
     return None
+
+def similarityMatrixComputer(block,theColors,workingConditions,F,G):
+
+    '''
+    this function computes a matrix of differences for clusters of corems for a particular condition
+    '''
+    
+    for i in range(len(theColors)):
+        for j in range(len(theColors)):
+            if i<=j:
+                color1=theColors[i]
+                color2=theColors[j]
+                
+                # define corems
+                coremsA=clusteredCorems[color1]
+                coremsB=clusteredCorems[color2]
+
+                # define frequency of differences
+                maxRankDifferences=0
+                KSdifferences=0
+                SCdifferences=0
+                
+                for coremA in coremsA:
+                    for coremB in coremsB:
+
+                        # obtain median expression for coremA
+                        X=[]
+                        genesA=coremGeneMemberships[coremA]
+                        for gene in genesA:
+                            Y=[]
+                            for condition in workingConditions:
+                                Y.append(fullExpression[condition][gene])
+                            X.append(Y)
+                        Z=numpy.array(X)
+                        medianA=numpy.median(Z,axis=0)
+
+                        # obtain median expression for coremB
+                        X=[]
+                        genesB=coremGeneMemberships[coremB]
+                        for gene in genesB:
+                            Y=[]
+                            for condition in workingConditions:
+                                Y.append(fullExpression[condition][gene])
+                            X.append(Y)
+                        Z=numpy.array(X)
+                        medianB=numpy.median(Z,axis=0)
+
+                        # test for the difference between them: KS and Spearman rank
+                        maxRankDifferences=maxRankDifferences+1
+                        diffKS=0
+                        diffSC=0
+
+                        D,pvalueKS=scipy.stats.ks_2samp(medianA,medianB)
+                        if pvalueKS <= 0.05:
+                            KSdifferences=KSdifferences+1
+                            diffKS=1
+
+                        correlation,pvalueSC=scipy.stats.spearmanr(medianA,medianB)
+                        
+                        if correlation >= 0.4 and pvalueSC <= 0.05: 
+                            pass
+                        else:
+                            SCdifferences=SCdifferences+1
+                            diffSC=1
+
+                        '''
+                        # plotting rank figures
+                        figureName='figures/similarityFigures/{}.{}.{}.{}.{}.pdf'.format(block,color1,color2,coremA,coremB)
+
+                        A=numpy.vstack([medianA,numpy.ones(len(medianA))]).T
+                        m,c=numpy.linalg.lstsq(A,numpy.array(medianB))[0]
+
+                        matplotlib.pyplot.scatter(medianA,medianB,color='black')
+                        matplotlib.pyplot.plot(medianA,medianA*m+c,color='red',lw=2)
+
+                        message='D={:.2f}, p={:.3f}, diff={:d}\nSC={:.2f}, p={:.3f}, diff={:d}'.format(D,pvalueKS,diffKS,correlation,pvalueSC,diffSC)
+                        matplotlib.pyplot.text(0,1,message)
+
+                        if diffKS == 0 and diffSC == 1:
+                            print('***\t {} {}'.format(coremA,coremB))
+                            print(message)
+                            print(figureName)
+                            print('')
+
+                        matplotlib.pyplot.tight_layout()
+                        matplotlib.pyplot.savefig(figureName)
+                        matplotlib.pyplot.clf()
+
+                        '''
+
+                # define similarity
+                similarityKS=1-(KSdifferences/maxRankDifferences)
+                F[i,j]=similarityKS
+                F[j,i]=similarityKS
+
+                similaritySC=1-(SCdifferences/maxRankDifferences)
+                G[i,j]=similaritySC
+                G[j,i]=similaritySC
+
+                print(color1,color2,similarityKS,similaritySC)
+
+    return F,G
 
 def tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue):
 
