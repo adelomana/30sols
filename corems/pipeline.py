@@ -247,13 +247,14 @@ def differencesAssessment(block,theColors):
             workingConditions.append(specific)
 
     # compute F and G
-    F=numpy.empty([len(theColors),len(theColors)])
-    G=numpy.empty([len(theColors),len(theColors)])
-
+    F=numpy.ones([len(theColors),len(theColors)]) # KS-based differences
+    G=numpy.ones([len(theColors),len(theColors)]) # SC-based differences
+    H=numpy.ones([len(theColors),len(theColors)]) # both KS and SC
+    
     if len(workingConditions) > 50:
-        F,G=similarityMatrixComputer(block,theColors,workingConditions,F,G)
+        F,G,H=similarityMatrixComputer(block,theColors,workingConditions,F,G,H)
                     
-    return F,G,len(workingConditions)
+    return F,G,H,len(workingConditions)
 
 def dimensionalityReductionAnalyses():
 
@@ -352,15 +353,17 @@ def exhaustiveDifferencesFinder():
     # compute and store similarity based on KS
     similarityKS={}
     similaritySC={}
+    similarityBoth={}
     conditionsSizes={}
     for block in sortedBlockConditions:
         # compute the matrix of differences for that particular condition
-        F,G,conditionSize=differencesAssessment(block,theColors)
-        if F.size != 0:
+        F,G,H,conditionSize=differencesAssessment(block,theColors)
+        if numpy.mean(F) != 1:
             similarityKS[block]=F
             similaritySC[block]=G
+            similarityBoth[block]=H
             conditionsSizes[block]=conditionSize
-    similarities=[similarityKS,similaritySC,conditionsSizes]
+    similarities=[similarityKS,similaritySC,similarityBoth,conditionsSizes]
     f=open(similarityJar,'wb')
     pickle.dump(similarities,f)
     f.close()
@@ -436,10 +439,10 @@ def heatmapSimilaritiesPlotter(similarities):
     this function plots a heatmap of similarity indexes, both for Kolmogorov-Smirnov-based and Spearman Coefficient-based similarities
     '''
 
-    methodLabels=['ks','sc']
+    methodLabels=['ks','sc','both']
     computedBlocks=list(similarities[0].keys())
-    conditionsSizes=similarities[2]
-    
+    conditionsSizes=similarities[-1]
+
     for i in range(len(methodLabels)):
 
         # sorting conditions from high similarity to low
@@ -447,43 +450,34 @@ def heatmapSimilaritiesPlotter(similarities):
         
         for block in computedBlocks:
             B=similarities[i][block]
-            print(B.shape)
-            print(B)
-            print(numpy.mean(B))
             similarityOrder[block]=numpy.mean(B)
 
-        sortedComputedBlockCondition=sorted(similarityOrder.values())
-        print(similarityOrder)
-        for block in sortedComputedBlockCondition:
-            print(block,sortedComputedBlockCondition[block])
+        sortedComputedBlockConditions=sorted(similarityOrder,key=similarityOrder.__getitem__,reverse=True)
 
-        sys.exit()
-
-        for j in range(len(sortedBlockConditions)):
-            block=sortedBlockConditions[j]
+        for j in range(len(sortedComputedBlockConditions)):
             if j == 0:
-                G=similarities[i][block]
+                V=similarities[i][sortedComputedBlockConditions[j]]
             else:
-                G=numpy.hstack((G,similarities[i][block]))
+                V=numpy.hstack((V,similarities[i][sortedComputedBlockConditions[j]]))
 
         # plotting figure
-        figureName='figures/similarity.{}.png'.format(methodLabels[i])
+        figureName='figures/similarity.{}.pdf'.format(methodLabels[i])
     
-        matplotlib.pyplot.imshow(G,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
+        matplotlib.pyplot.imshow(V,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
 
         cb=matplotlib.pyplot.colorbar(label='similarity',orientation='horizontal',fraction=0.025) 
         cb.ax.tick_params(labelsize=10)
 
-        positions=[(i*4)-0.5 for i in range(18)]
+        positions=[(i*4)-0.5 for i in range(len(sortedComputedBlockConditions))]
         values=[str(int(element+0.5)) for element in positions]
         matplotlib.pyplot.xticks(positions,values,size=10)
         matplotlib.pyplot.yticks([],[])
 
-        for j in range(len(sortedBlockConditions)):
+        for j in range(len(sortedComputedBlockConditions)):
             xpos=2+j*4
             ypos=-1
             
-            label='{} n={}'.format(sortedBlockConditions[j],conditionsSizes[sortedBlockConditions[j]])
+            label='{} n={}'.format(sortedComputedBlockConditions[j],conditionsSizes[sortedComputedBlockConditions[j]])
             matplotlib.pyplot.text(xpos,ypos,label,rotation=90,horizontalalignment='center',verticalalignment='bottom')
     
         matplotlib.pyplot.tight_layout()
@@ -626,12 +620,12 @@ def plotter(label,analysedData,sortedBlockConditions):
 
     return None
 
-def similarityMatrixComputer(block,theColors,workingConditions,F,G):
+def similarityMatrixComputer(block,theColors,workingConditions,F,G,H):
 
     '''
     this function computes a matrix of differences for clusters of corems for a particular condition
     '''
-    
+
     for i in range(len(theColors)):
         for j in range(len(theColors)):
             if i<=j:
@@ -646,6 +640,7 @@ def similarityMatrixComputer(block,theColors,workingConditions,F,G):
                 maxRankDifferences=0
                 KSdifferences=0
                 SCdifferences=0
+                anyDifferences=0
                 
                 for coremA in coremsA:
                     for coremB in coremsB:
@@ -690,31 +685,36 @@ def similarityMatrixComputer(block,theColors,workingConditions,F,G):
                             SCdifferences=SCdifferences+1
                             diffSC=1
 
+                        if diffKS == 1 or diffSC == 1:
+                            anyDifferences=anyDifferences+1
+
+
                         '''
+                        
                         # plotting rank figures
-                        figureName='figures/similarityFigures/{}.{}.{}.{}.{}.pdf'.format(block,color1,color2,coremA,coremB)
-
-                        A=numpy.vstack([medianA,numpy.ones(len(medianA))]).T
-                        m,c=numpy.linalg.lstsq(A,numpy.array(medianB))[0]
-
-                        matplotlib.pyplot.scatter(medianA,medianB,color='black')
-                        matplotlib.pyplot.plot(medianA,medianA*m+c,color='red',lw=2)
-
-                        message='D={:.2f}, p={:.3f}, diff={:d}\nSC={:.2f}, p={:.3f}, diff={:d}'.format(D,pvalueKS,diffKS,correlation,pvalueSC,diffSC)
-                        matplotlib.pyplot.text(0,1,message)
-
                         if diffKS == 0 and diffSC == 1:
+                            figureName='figures/similarityFigures/{}.{}.{}.{}.{}.pdf'.format(block,color1,color2,coremA,coremB)
+
+                            A=numpy.vstack([medianA,numpy.ones(len(medianA))]).T
+                            m,c=numpy.linalg.lstsq(A,numpy.array(medianB))[0]
+
+                            matplotlib.pyplot.scatter(medianA,medianB,color='black')
+                            matplotlib.pyplot.plot(medianA,medianA*m+c,color='red',lw=2)
+
+                            message='D={:.2f}, p={:.3f}, diff={:d}\nSC={:.2f}, p={:.3f}, diff={:d}'.format(D,pvalueKS,diffKS,correlation,pvalueSC,diffSC)
+                            matplotlib.pyplot.text(0,1,message)
+                            
                             print('***\t {} {}'.format(coremA,coremB))
                             print(message)
                             print(figureName)
                             print('')
 
-                        matplotlib.pyplot.tight_layout()
-                        matplotlib.pyplot.savefig(figureName)
-                        matplotlib.pyplot.clf()
-
+                            matplotlib.pyplot.tight_layout()
+                            matplotlib.pyplot.savefig(figureName)
+                            matplotlib.pyplot.clf()
                         '''
 
+                        
                 # define similarity
                 similarityKS=1-(KSdifferences/maxRankDifferences)
                 F[i,j]=similarityKS
@@ -723,10 +723,14 @@ def similarityMatrixComputer(block,theColors,workingConditions,F,G):
                 similaritySC=1-(SCdifferences/maxRankDifferences)
                 G[i,j]=similaritySC
                 G[j,i]=similaritySC
+                
+                similarityBoth=1-(anyDifferences/maxRankDifferences)
+                H[i,j]=similarityBoth
+                H[j,i]=similarityBoth
 
-                print(color1,color2,similarityKS,similaritySC)
+                print('\t\t {} {} {}'.format(color1,color2,similarityBoth))
 
-    return F,G
+    return F,G,H
 
 def tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue):
 
@@ -751,7 +755,7 @@ allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/allCor
 dataDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/expressionSelectedCorems/'
 metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/metadata/array_annot.txt'
 expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/halo_egrin2_expression_ratios.txt'
-jarDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/jars'
+jarDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/jars/'
 iterations=int(1e1)
 
 clusteredCorems={}
