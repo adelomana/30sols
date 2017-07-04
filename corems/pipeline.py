@@ -347,7 +347,7 @@ def exhaustiveDifferencesFinder():
     this function computes the frequency of differences between corems of different clusters (colors)
     '''
 
-    theColors=['red','magenta','blue','green']
+    theColors=['red','green','blue','magenta']
     similarityJar=jarDir+'similarity.pickle'
 
     # compute and store similarity based on KS
