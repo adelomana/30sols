@@ -10,6 +10,8 @@ setwd("~/github/30sols/GREs")
 data=read.table('foo.csv',header=FALSE,sep = ",")
 
 metadata=read.table('classMembership.txt',sep="\t",header=TRUE)
+tmp=metadata$ribosomal.class[1:dim(data)[1]]
+tmp2=tmpp[]
 classMembership=data.frame(ClassMembership = metadata$ribosomal.class[1:dim(data)[1]])
 longCoremNames=paste("corem",rownames(data), sep="")
 rownames(data)=longCoremNames
