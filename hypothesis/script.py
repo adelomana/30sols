@@ -248,6 +248,7 @@ def outliersDefiner(x,y,z):
     devs=[]
     redIndexes=[]
     blueIndexes=[]
+    cyanIndexes=[]
     topOutliers=[]; bottomOutliers=[]; backgroundOutliers=[]
 
     for i in range(len(grid)-1):
@@ -271,6 +272,8 @@ def outliersDefiner(x,y,z):
                         topOutliers.append(z[j])
                 elif y[j] < mexico:
                     blueIndexes.append(j)
+                    if z[j] in ribosomalProteinGenes:
+                        cyanIndexes.append(j)
                     if z[j] not in bottomOutliers:
                         bottomOutliers.append(z[j])
                 else:
@@ -289,6 +292,9 @@ def outliersDefiner(x,y,z):
     blackx=[x[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
     blacky=[y[i] for i in range(len(x)) if i not in blueIndexes and i not in redIndexes]
 
+    cyanx=[x[i] for i in range(len(x)) if i in cyanIndexes]
+    cyany=[y[i] for i in range(len(x)) if i in cyanIndexes]
+
     matplotlib.pyplot.plot(blackx,blacky,'ok',alpha=0.1,mew=0)
 
     matplotlib.pyplot.plot(pos,means,'-g',lw=2)
@@ -297,15 +303,17 @@ def outliersDefiner(x,y,z):
 
     matplotlib.pyplot.plot(redx,redy,'or',mew=0)
     matplotlib.pyplot.plot(bluex,bluey,'ob',mew=0)
+    matplotlib.pyplot.plot(cyanx,cyany,'oc',mew=0)
 
     matplotlib.pyplot.xlim([-0.2,6])
     matplotlib.pyplot.xlim([-0.2,6])
     matplotlib.pyplot.xlabel('mRNA log$_{10}$ (TPM+1)')
     matplotlib.pyplot.ylabel('RBF log$_{10}$ (TPM+1)')
+    matplotlib.pyplot.title('all, tp=2')
 
     matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.axes().set_aspect('equal')
-    matplotlib.pyplot.savefig('figures/outliersDistribution.pdf')
+    #matplotlib.pyplot.axes().set_aspect('equal')
+    matplotlib.pyplot.savefig('figures/outliersDistribution.tp2.pdf')
     matplotlib.pyplot.clf()
 
     return topOutliers,bottomOutliers,backgroundOutliers
@@ -601,6 +609,8 @@ print()
 ribosomalProteinGenes=riboListReader()
 ribosomalProteinGenes.sort()
 
+"""
+
 # 2. building a figure of log2 mRNA versus log2 pt
 #staticAnalysis_RNAprotein()
 
@@ -698,20 +708,21 @@ matplotlib.pyplot.savefig('figures/scatterTPM_FC.pdf')
 matplotlib.pyplot.clf()
 
               
-
+"""
 #####
 
 # 3.2. testing for distribution of affinity in first points
 x=[]
 y=[]
 z=[]
+t=[]
 
 for name in transcriptomeNames:
     transcriptValues=[]
     footprintValues=[]
     for replicate in sortedReplicateLabels:
-        valueT=numpy.log10(rnaExpression['trna'][replicate]['tp.1'][name]+1)
-        valueF=numpy.log10(rnaExpression['rbf'][replicate]['tp.1'][name]+1)
+        valueT=numpy.log10(rnaExpression['trna'][replicate]['tp.4'][name]+1)
+        valueF=numpy.log10(rnaExpression['rbf'][replicate]['tp.4'][name]+1)
 
         transcriptValues.append(valueT)
         footprintValues.append(valueF)
@@ -733,7 +744,7 @@ ibottom=list(set(bottomOutliers) & set(ribosomalProteinGenes))
 print('intersect ribosomal genes and top outliers',itop)
 print('intersect ribosomal genes and bottom outliers',ibottom)
 
-
+sys.exit()
 # checking that outliers have different expression behavior in the future
 outliersChecker(topOutliers,bottomOutliers,backgroundOutliers)
 
