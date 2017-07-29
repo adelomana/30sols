@@ -126,14 +126,14 @@ abundanceFiles=[cufflinksDir+element+'/abundances.cxb' for element in roots]
 labels=[element.split('_')[-1] for element in roots]
 
 # 2. calling cuffquantCaller 
-#print('calling cuffquant...')
-#for inputFile in bamFiles:
-#    cuffquantCaller(inputFile)
+print('calling cuffquant...')
+for inputFile in bamFiles:
+    cuffquantCaller(inputFile)
 
 # 3. calling cuffnorm
-#print('calling cuffnorm...')
-#cuffnormCaller()
+print('calling cuffnorm...')
+cuffnormCaller()
 
 # 4. calling cuffdiff
 print('calling cuffdiff...')
-cuffdiffCaller()
+#cuffdiffCaller()
