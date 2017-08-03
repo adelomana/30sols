@@ -3,71 +3,38 @@ library(pheatmap)
 library(MASS)
 library(gplots)
 library(RColorBrewer)
-library(entropy)
 library(viridis)
 
-# 1. reading data
+# 1. reading and treating data
 setwd("~/github/30sols/GREs")
-data=read.table('foo.csv',header=FALSE,sep = ",")
+data=as.matrix(read.table('/Volumes/omics4tb/alomana/projects/TLR/data/GREs/ribosomal_corems_motif_counts.clean.csv',header=TRUE,sep = ",",row.names=1))
+#data=log2(data+1)
+data[data>50]=50
 
 # 2. reading and treating metadata
-metadata=read.table('classMembership.txt',sep="\t",header=TRUE)
-classMembership=data.frame(ClassMembership=metadata$ribosomal.class[1:dim(data)[1]])
+metadata=read.table('/Volumes/omics4tb/alomana/projects/TLR/data/annotation/coremClasses.csv',sep=",",header=TRUE,row.names=1)
+plottingCorems=rownames(data)
+selectedMetadata=data.frame(corems=plottingCorems,ribo.class=metadata[plottingCorems,],row.names=1)
 
-working=as.matrix(classMembership)
-working[working=='Green, Blue']='black'
-working[working=='Green, Magenta']='black'
-working[working=='Blue, Magenta']='black'
-working[working=='Red, Magenta']='black'
+annotationColors=list(ribo.class=levels(selectedMetadata$ribo.class))
+names(annotationColors$ribo.class)=levels(selectedMetadata$ribo.class)
 
-working[working=='Red']='red'
-working[working=='Blue']='blue'
-working[working=='Green']='green'
-working[working=='Magenta']='magenta'
-classMembership=as.data.frame(working)
+# 4. making a heatmap
+res=pheatmap(data,clustering_method='ward.D2',show_rownames = TRUE,show_colnames = TRUE,color=viridis(256),fontsize=8,border_color=NA,annotation_row=selectedMetadata,annotation_colors=mat_colors)
 
-longCoremNames=paste("corem",rownames(data), sep="")
-rownames(data)=longCoremNames
-rownames(classMembership)=longCoremNames
+# 5. making pie charts
+slices=c(1)
+lbls=c('red')
+pie(slices,labels=lbls,main='pie 1',col=lbls)
 
-# computing biclusters
-# consider exploring https://bioconductor.org/packages/devel/bioc/vignettes/ComplexHeatmap/inst/doc/s9.examples.html 
-#and https://rstudio-pubs-static.s3.amazonaws.com/132435_18fcdc0bd52849f9b61c4b64ced3f22f.html
+slices=c(7,9)
+lbls=c('magenta','blue')
+pie(slices,labels=lbls,main='pie 2',col=lbls)
 
-#permutationIterations=1000
+slices=c(9,4,10,1)
+lbls=c('red','green','magenta','blue')
+pie(slices,labels=lbls,main='pie 3',col=lbls)
 
-# 2.1. clustering GREs (Vi)
-#GREclusterResults=pvclust(data,method.hclust="ward.D2",method.dist="euclidean",nboot=permutationIterations,parallel=TRUE)
-#plot(GREclusterResults)
-#pvrect(GREclusterResults)
-#significantGREclusters=pvpick(GREclusterResults)
-#significantGREclusters
-
-# 2.2. clustering corems (i)
-#coremClusterResults=pvclust(t(data),method.hclust="ward.D2",method.dist="euclidean",nboot=permutationIterations,parallel=TRUE)
-#plot(coremClusterResults)
-#pvrect(coremClusterResults)
-#significantCoremClusters=pvpick(coremClusterResults)
-#significantCoremClusters
-
-# 3. creating figure
-#heatmap(as.matrix(data),Rowv=coremClusterResults$hclust$order,Colv=GREclusterResults$hclust$order,col=viridis(256))
-#heatmap(as.matrix(data),Rowv=coremClusterResults$hclust$order,Colv=GREclusterResults$hclust$order)
-
-# 4. alternatively, pheatmap
-mat_colors <- list(ClassMembership = c('green','black','magenta','blue','red'))
-names(mat_colors$ClassMembership) <- unique(classMembership$ClassMembership)
-res=pheatmap(data,
-             clustering_method='ward.D2',
-             annotation_row=classMembership,
-             annotation_colors=mat_colors,
-             color=viridis(256),
-             border_color=NA,
-             fontsize          = 8
-             #show_colnames=FALSE,
-             #show_rownames=FALSE
-             )
-
-# consider using entropy as proxy for order
-# consider using isa, https://cran.r-project.org/web/packages/isa2/isa2.pdf and https://faculty.washington.edu/dwitten/people.html
-
+slices=c(9,1)
+lbls=c('magenta','blue')
+pie(slices,labels=lbls,main='pie 4',col=lbls)
