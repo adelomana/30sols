@@ -1,4 +1,6 @@
 # this is a script that performs PCA on the proteomics samples
+library(devtools)
+library(ggfortify)
 library(ggplot2)
 
 setwd("~/30sols/expression/proteomics")
@@ -47,7 +49,9 @@ joinedData=data.frame(geneNames=commonNames,
 finalData=t(joinedData)
 
 # 2. perform pca
-result=prcomp(finalData,scale=FALSE)
+result=prcomp(finalData,scale=TRUE)
 summary(result)
-#plot(result$x)
-autoplot(result)
+
+myColors=c(rep('red',9),rep('blue',9))
+myMarkers=rep(c(17,15,3),6)
+autoplot(result) + geom_point(colour=myColors,size=5,shape=myMarkers)
