@@ -1,15 +1,11 @@
-library(pvclust)
 library(pheatmap)
-library(MASS)
-library(gplots)
-library(RColorBrewer)
 library(viridis)
 
 # 1. reading and treating data
 setwd("~/github/30sols/GREs")
 data=as.matrix(read.table('/Volumes/omics4tb/alomana/projects/TLR/data/GREs/ribosomal_corems_motif_counts.clean.csv',header=TRUE,sep = ",",row.names=1))
-#data=log2(data+1)
 data[data>50]=50
+dim(data)
 
 # 2. reading and treating metadata
 metadata=read.table('/Volumes/omics4tb/alomana/projects/TLR/data/annotation/coremClasses.csv',sep=",",header=TRUE,row.names=1)
@@ -19,10 +15,10 @@ selectedMetadata=data.frame(corems=plottingCorems,ribo.class=metadata[plottingCo
 annotationColors=list(ribo.class=levels(selectedMetadata$ribo.class))
 names(annotationColors$ribo.class)=levels(selectedMetadata$ribo.class)
 
-# 4. making a heatmap
-res=pheatmap(data,clustering_method='ward.D2',show_rownames = TRUE,show_colnames = TRUE,color=viridis(256),fontsize=8,border_color=NA,annotation_row=selectedMetadata,annotation_colors=mat_colors)
+# 3. making a heatmap
+res=pheatmap(data,clustering_method='ward.D2',show_rownames = TRUE,show_colnames = TRUE,color=viridis(256),fontsize=8,border_color=NA,annotation_row=selectedMetadata,annotation_colors=annotationColors)
 
-# 5. making pie charts
+# 4. making pie charts
 slices=c(1)
 lbls=c('red')
 pie(slices,labels=lbls,main='pie 1',col=lbls)

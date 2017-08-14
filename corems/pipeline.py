@@ -267,17 +267,19 @@ def dimensionalityReductionAnalyses():
     allFiles=os.listdir(allCoremsExpressionDir)
     coremLabels=[int(element.split('.txt')[0]) for element in allFiles if '.txt' in element]
     coremLabels.sort()
+
+    for i in range(len(coremLabels)):
     
-    if coremLabels[i] in greenLabels:
-        theColors.append('green'); theAlphas.append(.8)
-    elif coremLabels[i] in redLabels:
-        theColors.append('red'); theAlphas.append(.8)
-    elif coremLabels[i] in magentaLabels:
-        theColors.append('magenta'); theAlphas.append(.8)
-    elif coremLabels[i] in blueLabels:
-        theColors.append('blue'); theAlphas.append(.8)
-    else:
-        theColors.append('black'); theAlphas.append(0.1)
+        if coremLabels[i] in clusteredCorems['green']:
+            theColors.append('green'); theAlphas.append(.8)
+        elif coremLabels[i] in clusteredCorems['red']:
+            theColors.append('red'); theAlphas.append(.8)
+        elif coremLabels[i] in clusteredCorems['magenta']:
+            theColors.append('magenta'); theAlphas.append(.8)
+        elif coremLabels[i] in clusteredCorems['blue']:
+            theColors.append('blue'); theAlphas.append(.8)
+        else:
+            theColors.append('black'); theAlphas.append(0.1)
                 
     # 1.2. define median expression over all conditions for each corem
     M=[] # a matrix containing the medians of corems
@@ -300,6 +302,7 @@ def dimensionalityReductionAnalyses():
     # 1.4. t-SNE 
     figureFile='figures/figure.tSNE.pdf'
     perplexityValue=50
+    print(N.shape,len(coremLabels))
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
 
     # 2. only ribosomal corems
@@ -814,7 +817,7 @@ for case in coremPaths:
 #coremAverageTrends(aggregateData)
 
 # 4. dimensionality reduction analyses
-#dimensionalityReductionAnalyses()
+dimensionalityReductionAnalyses()
 
 # 5. condition-specific finder
 print('computing differences between clusters of corems at specific conditions...')

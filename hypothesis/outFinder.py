@@ -80,22 +80,23 @@ for timepoint in timepoints:
     for geneName in geneNames:
         
         # check consistency of mRNA
-        mRNA_TPM=[]; footprint_TPM=[]
+        mRNA_TPMs=[]; footprint_TPMs=[]
         for replicate in replicates:
             mRNA_TPMs.append(rnaExpression['trna'][replicate][timepoint][geneName])
             footprint_TPMs.append(rnaExpression['rbf'][replicate][timepoint][geneName])
             
         # data transformations 
-            
-        e=numpy.log2(x+1)
-        l=numpy.log10(x+1)
-        f=numpy.log2(y+1)
-        r=f-e
+        m=numpy.median(mRNA_TPMs); f=numpy.median(footprint_TPMs)
+        
+        log2m=numpy.log2(m+1)
+        log10m=numpy.log10(m+1)
+        log2f=numpy.log2(f+1)
+        r=log2f-log2m
 
-            if y == 0:
-                hollowx.append(l); hollowy.append(r)
-            else:
-                setx.append(l); sety.append(r)
+        if f == 0:
+            hollowx.append(log10m); hollowy.append(r)
+        else:
+            setx.append(log10m); sety.append(r)
 
     # performing regression analysis
     A=numpy.vstack([setx,numpy.ones(len(setx))]).T
@@ -107,9 +108,16 @@ for timepoint in timepoints:
 
     print(m,c)
 
-    satx=10**(numpy.array(setx))-1
-    saty=(10**c)*(satx**(1+m))-1
-    sat.append([satx,saty])
+    # computed from Matt Wall on log2
+    ### satx=2**(numpy.array(setx))-1
+    ### saty=(2**c)*((satx+1)**(1+m))-1
+
+    # computed ALO on log10 for x
+    satx=(10**numpy.array(setx))-1
+    factor=m*numpy.log10(satx+1) + c + numpy.log2(satx+1)
+    saty=(2**(factor))-1
+
+    sat.append([list(satx),list(saty)])
         
     # plotting
     matplotlib.pyplot.plot(setx,sety,'o',alpha=0.1,mew=0,color='black')
@@ -117,8 +125,11 @@ for timepoint in timepoints:
     
     matplotlib.pyplot.plot(setx,expected,'-',lw=2,color='green')
     
-    matplotlib.pyplot.xlabel('mRNA [log$_2$ TPM+1]')
-    matplotlib.pyplot.ylabel('footprint/mRNA [log$_{10}$ FC]')
+    matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+    matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ FC]')
+
+    matplotlib.pyplot.xlim([-0.1,5.2])
+    matplotlib.pyplot.ylim([-15,5.25])
 
     matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
 
@@ -126,12 +137,15 @@ for timepoint in timepoints:
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()
 
-
 # plotting the saturation effect
 figureName='figures/saturation.pdf'
 theColors=['blue','green','orange','red']
+
 for i in range(len(sat)):
-    matplotlib.pyplot.semilogx(sat[i][0],sat[i][1],'-',lw=2,color=theColors[i])
+    px=sat[i][0]
+    py=sat[i][1]
+    matplotlib.pyplot.plot(px,py,'o',color=theColors[i])
+    
 
 matplotlib.pyplot.xlabel('mRNA [TPM]')
 matplotlib.pyplot.ylabel('predicted footprint [TPM]')
