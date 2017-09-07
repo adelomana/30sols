@@ -50,5 +50,7 @@ with open(coremsFile,'r') as f:
         democracy=max(set(foundClasses), key=foundClasses.count)
         
         g.write('corem.{},{}\n'.format(coremID,democracy.lower()))
+
+        print(democracy)
         
 g.close()
