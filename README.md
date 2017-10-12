@@ -1,2 +1,2 @@
 # 30sols
-Tools for the study of translational regulation
+Computational tools for the study of coupled transcription-translation modules in Halobacterium salinarum.
