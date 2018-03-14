@@ -2,9 +2,8 @@
 ### This script computes the stoichiometry of ribosomal proteins over time
 ###
 
-import os,sys,numpy
+import os,sys,numpy,seaborn,pandas
 import matplotlib,matplotlib.pyplot
-import sklearn,sklearn.decomposition,sklearn.manifold
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 matplotlib.rcParams['pdf.fonttype']=42
@@ -64,7 +63,6 @@ def dataReader():
                 data[condition][replicate]['tp3vs1'][geneName]=b
                 data[condition][replicate]['tp4vs1'][geneName]=c
 
-
     # sort
     geneNames.sort()
     conditions.sort()
@@ -78,13 +76,15 @@ def figureGrapher():
     This function creates a figure on the stoichiometry analysis.
     '''
 
-    print(condition)
+    print('\nanalysis of condition {}...'.format(condition))
     
     # f.1. plotting the first point
-    matplotlib.pyplot.plot([1],[1],'o',color=colors[0],label=timePointLabels[0],alpha=0.3,mew=0,ms=theDotSize)
+    #matplotlib.pyplot.plot([1],[0],'o',color=colors[0],label=timePointLabels[0],mew=0,ms=theDotSize)
 
     # f.2. processing 
     noInfoSet=[]
+    plottingData=[]
+    
     for i in range(len(timepoints)):
         allFractions=[]
         for ribopt in riboPtNames:
@@ -99,28 +99,41 @@ def figureGrapher():
         # f.2. computing the stoichiometry per time point
         theSum=sum(allFractions)
         stoich=(numpy.array(allFractions)/theSum)*len(allFractions)
+        log2Stoich=numpy.log2(stoich)
+        plottingData.append(list(log2Stoich))
+        #matplotlib.pyplot.plot(numpy.repeat(i+2,len(stoich)),log2Stoich,'o',color=colors[i+1],alpha=0.1,mew=0,ms=theDotSize,label=timePointLabels[i+1])
 
-        print(allFractions)
-        print(theSum)
-        print(stoich)
-        #sys.exit()
+        # f.3. finding the limits of 95% of the distribution
+        #zp=1.959963984540 # taken from https://en.wikipedia.org/wiki/Normal_distribution
+        #mean=numpy.mean(log2Stoich)
+        #standardDeviation=numpy.std(log2Stoich)
+        #low=mean-standardDeviation; high=mean+standardDeviation
+        #print(timepoints[i],mean,standardDeviation,low,high)
+        #for element in log2Stoich:
+        #    if element > high or element < low:
+        #        matplotlib.pyplot.plot(i+2,element,'o',color=colors[i+1],alpha=1,mew=0,ms=theDotSize)
 
-        matplotlib.pyplot.plot(numpy.repeat(i+2,len(stoich)),stoich,'o',color=colors[i+1],alpha=0.3,mew=0,ms=theDotSize,label=timePointLabels[i+1])
+    
+
+    df=pandas.DataFrame({'Time points':[1,2,3],'Stoichiometry':[[2],[2],[2]]})
+
+    ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=df)
+    matplotlib.pyplot.plot('test.pdf')
 
     # do consistently the top and bottome 5 percentile
-    matplotlib.pyplot.grid(alpha=0.5, ls=':')
-    matplotlib.pyplot.xlabel('Time point')
-    matplotlib.pyplot.ylabel('Ribosomal stoichiometry')
-    matplotlib.pyplot.title(condition)
+    #matplotlib.pyplot.grid(alpha=0.5, ls=':')
+    #matplotlib.pyplot.xlabel('Time point')
+    #matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
+    #matplotlib.pyplot.title(condition)
 
-    matplotlib.pyplot.xticks([1,2,3,4])
+    #matplotlib.pyplot.xticks([1,2,3,4])
     #matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=2,ncol=1,fontsize=14)
 
-    figureName='figure.{}.pdf'.format(condition)
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.axes().set_aspect('equal')
-    matplotlib.pyplot.savefig(figureName)
-    matplotlib.pyplot.clf()    
+    #figureName='figure.{}.pdf'.format(condition)
+    #matplotlib.pyplot.tight_layout()
+    #matplotlib.pyplot.axes().set_aspect('equal')
+    #matplotlib.pyplot.savefig(figureName)
+    #matplotlib.pyplot.clf()    
 
     return None
 
@@ -149,6 +162,7 @@ ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGene
 
 colors=['red','orange','green','blue']
 timePointLabels=['TP1','TP2','TP3','TP4']
+
 theDotSize=8
 
 conditions=['rbf','lysate']
@@ -157,7 +171,6 @@ conditions=['rbf','lysate']
 print('reading data...')
 data,geneNames,conditions,replicates,timepoints=dataReader()
 riboPtNames=riboPtNamesReader()
-print(timepoints)
 
 # 2. analyse data
 print('analyzing data...')
