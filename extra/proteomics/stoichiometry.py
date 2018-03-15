@@ -70,7 +70,7 @@ def dataReader():
     
     return data,geneNames,conditions,replicates,timepoints
 
-def figureGrapher():
+def figureGrapher(colorAssociation):
 
     '''
     This function creates a figure on the stoichiometry analysis.
@@ -79,6 +79,8 @@ def figureGrapher():
     print('\nanalysis of condition {}...'.format(condition))
     
     # f.1. initialize variables
+    noInfoSet=[]
+    
     foldChangeInfo={} # dictionary with all information about fold-change: foldChangeInfo[timePointLabel][riboPtName]=value (fold-change)
     stoichInfo={} # dictionary with all information about stoichiometry: stoichInfo[timePointLabel][riboPtName]=value (log2 stoichiometry value)
 
@@ -87,9 +89,10 @@ def figureGrapher():
     timeStampsViolin.append(timePointLabels[0]); stoichValuesViolin.append(0) # incorporate a single point for violin
     timeStampsSwarm.append(timePointLabels[0]); stoichValuesSwarm.append(0) # incorporate a single point for violin
 
-    significantCases=[]
-    significantPositions=[]
-    noInfoSet=[]
+    significantNames=[]
+    significantPositions={}
+
+    thresholds={}
 
     # f.2. compute stoichiometries
     for i in range(len(timepoints)):
@@ -126,16 +129,25 @@ def figureGrapher():
         standardDeviation=numpy.std(log2Stoich)
         low=mean-standardDeviation; high=mean+standardDeviation
         
-        print('low, high',low,high)
+        margin=0.2
+        a=i+1-margin
+        b=i+1+margin
+        matplotlib.pyplot.plot([a,b],[high,high],'-',color='white')
+        matplotlib.pyplot.plot([a,b],[low,low],'-',color='white')
 
         # f.2.3. fill up variables for plotting considering significances
         for i in range(len(localNames)):
             v=log2Stoich[i]
             timeStampsViolin.append(timeLabel); stoichValuesViolin.append(v)
             if v > high or v < low:
-                significantPositions.append([timePointLabels.index(timeLabel),v])
-                if localNames[i] not in significantCases:
-                    significantCases.append(localNames[i])
+
+                if localNames[i] not in significantPositions:
+                    significantPositions[localNames[i]]=[[],[]]
+                significantPositions[localNames[i]][0].append(timePointLabels.index(timeLabel))
+                significantPositions[localNames[i]][1].append(v)
+                
+                if localNames[i] not in significantNames:
+                    significantNames.append(localNames[i])
             else:
                 timeStampsSwarm.append(timeLabel); stoichValuesSwarm.append(v)
 
@@ -147,47 +159,49 @@ def figureGrapher():
     dfSwarm=pandas.DataFrame(data=stoichiometrySwarm,columns=['Time points','Stoichiometry'])
     
     # f.6. plot violin and swarm plots with seaborn
-    colorPalette={}
-    for i in range(len(orderedColors)):
-        colorPalette[timePointLabels[i]]=orderedColors[i]
-
     ax=seaborn.violinplot(x='Time points',y='Stoichiometry',data=dfViolin,inner=None,linewidth=0,color='0.5')
     matplotlib.pyplot.setp(ax.collections, alpha=.5)
+    ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=dfSwarm,color='white',size=theDotSize,zorder=1)
 
-    ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=dfSwarm,color='white',size=theDotSize,zorder=2)
+    # f.7. plot special point
+    matplotlib.pyplot.plot(0,0,'s',color='black',ms=theDotSize,mew=0,zorder=10)
 
-    # f.7. plot special points
-    matplotlib.pyplot.plot(0,0,'o',color=orderedColors[0],ms=theDotSize,mew=0,zorder=10)
+    # f.8. plot significant trajectories
+    for name in sorted(significantPositions):
+        if len(significantPositions[name][0]) > 1:
+            x=[0]; y=[0]
+            for i in range(len(timepoints)):
+                timeLabel=timePointLabels[i+1]
+                x.append(i+1)
+                y.append(stoichInfo[timeLabel][name])
+            if name not in colorAssociation:
+                colorAssociation[name]=matplotlib.cm.tab10(len(colorAssociation))
+            matplotlib.pyplot.plot(x,y,':',color=colorAssociation[name],lw=3,zorder=0,label=nameAliases[name])
 
-    # f.8. plot significant cases
-    for case in significantCases:
-        x=[0]
-        y=[0]
-        for i in range(len(timepoints)):
-            timeLabel=timePointLabels[i+1]
-            x.append(i+1)
-            y.append(stoichInfo[timeLabel][case])
-            matplotlib.pyplot.plot(i+1,stoichInfo[timeLabel][case],'o',color='magenta',ms=theDotSize,mew=0)
-        matplotlib.pyplot.plot(x,y,':',color='black',lw=1,alpha=0.3,zorder=0)
-
-    for position in significantPositions:
-        matplotlib.pyplot.plot(position[0],position[1],'sk',ms=theDotSize*2,mew=0)
-
+    # f.9. plot significant points
+    for name in sorted(significantPositions):
+        x=significantPositions[name][0]
+        y=significantPositions[name][1]
+        if name in colorAssociation:
+            matplotlib.pyplot.plot(x,y,'o',color=colorAssociation[name],ms=theDotSize*2.5,mew=0)
+        else:
+            matplotlib.pyplot.plot(x,y,'o',color='black',ms=theDotSize*2.5,mew=0)
+            matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
+            
     # f.7. final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
     matplotlib.pyplot.title(condition)
 
-    #matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=2,ncol=1,fontsize=14)
+    matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=3,ncol=2,fontsize=14)
 
     figureName='figure.{}.pdf'.format(condition)
     matplotlib.pyplot.tight_layout()
-    #matplotlib.pyplot.axes().set_aspect('equal')
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()    
 
-    return None
+    return colorAssociation
 
 def riboPtNamesReader():
 
@@ -212,12 +226,26 @@ def riboPtNamesReader():
 dataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 
-orderedColors=['red','orange','green','blue']
 timePointLabels=['TP1','TP2','TP3','TP4']
-
 theDotSize=3
-
 conditions=['rbf','lysate']
+
+nameAliases={}
+nameAliases['VNG0551G']='L44E'
+nameAliases['VNG1158G']='S28E'
+nameAliases['VNG2469G']='L39E'
+nameAliases['VNG0433C']='S10-like'
+nameAliases['VNG1132G']='S13'
+nameAliases['VNG1159G']='L24E'
+
+nameAliases['VNG1705G']='L5'
+nameAliases['VNG1695G']='L22'
+nameAliases['VNG1703G']='S4E'
+nameAliases['VNG1697G']='S3'
+nameAliases['VNG2048G']='S24E'
+nameAliases['VNG1134G']='S11'
+nameAliases['VNG1157G']='L7AE'
+nameAliases['VNG2047G']='S27AE'
 
 # 1. read data
 print('reading data...')
@@ -226,5 +254,6 @@ riboPtNames=riboPtNamesReader()
 
 # 2. analyse data
 print('analyzing data...')
+colorAssociation={}
 for condition in conditions:
-    figureGrapher()
+    colorAssociation=figureGrapher(colorAssociation)
