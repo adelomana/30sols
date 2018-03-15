@@ -151,10 +151,10 @@ def figureGrapher():
     for i in range(len(orderedColors)):
         colorPalette[timePointLabels[i]]=orderedColors[i]
 
-    ax=seaborn.violinplot(x='Time points',y='Stoichiometry',data=dfViolin,inner=None,linewidth=0,palette=colorPalette)
+    ax=seaborn.violinplot(x='Time points',y='Stoichiometry',data=dfViolin,inner=None,linewidth=0,color='0.5')
     matplotlib.pyplot.setp(ax.collections, alpha=.5)
 
-    ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=dfSwarm,color='black',alpha=0.5,size=theDotSize,zorder=2)
+    ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=dfSwarm,color='white',size=theDotSize,zorder=2)
 
     # f.7. plot special points
     matplotlib.pyplot.plot(0,0,'o',color=orderedColors[0],ms=theDotSize,mew=0,zorder=10)
