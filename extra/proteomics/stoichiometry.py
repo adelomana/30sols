@@ -151,22 +151,22 @@ def figureGrapher(colorAssociation):
             else:
                 timeStampsSwarm.append(timeLabel); stoichValuesSwarm.append(v)
 
-    # f.5. create a dataframe for plotting with seaborn
+    # f.3. create a dataframe for plotting with seaborn
     stoichiometryViolin=list(zip(timeStampsViolin,stoichValuesViolin))
     dfViolin=pandas.DataFrame(data=stoichiometryViolin,columns=['Time points','Stoichiometry'])
 
     stoichiometrySwarm=list(zip(timeStampsSwarm,stoichValuesSwarm))
     dfSwarm=pandas.DataFrame(data=stoichiometrySwarm,columns=['Time points','Stoichiometry'])
     
-    # f.6. plot violin and swarm plots with seaborn
+    # f.4. plot violin and swarm plots with seaborn
     ax=seaborn.violinplot(x='Time points',y='Stoichiometry',data=dfViolin,inner=None,linewidth=0,color='0.5')
     matplotlib.pyplot.setp(ax.collections, alpha=.5)
     ax=seaborn.swarmplot(x='Time points',y='Stoichiometry',data=dfSwarm,color='white',size=theDotSize,zorder=1)
 
-    # f.7. plot special point
+    # f.5. plot special point
     matplotlib.pyplot.plot(0,0,'s',color='black',ms=theDotSize,mew=0,zorder=10)
 
-    # f.8. plot significant trajectories
+    # f.6. plot significant trajectories
     for name in sorted(significantPositions):
         if len(significantPositions[name][0]) > 1:
             x=[0]; y=[0]
@@ -178,7 +178,7 @@ def figureGrapher(colorAssociation):
                 colorAssociation[name]=matplotlib.cm.tab10(len(colorAssociation))
             matplotlib.pyplot.plot(x,y,':',color=colorAssociation[name],lw=3,zorder=0,label=nameAliases[name])
 
-    # f.9. plot significant points
+    # f.7. plot significant points
     for name in sorted(significantPositions):
         x=significantPositions[name][0]
         y=significantPositions[name][1]
@@ -188,7 +188,7 @@ def figureGrapher(colorAssociation):
             matplotlib.pyplot.plot(x,y,'o',color='black',ms=theDotSize*2.5,mew=0)
             matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
-    # f.7. final figure closing
+    # f.8. final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
