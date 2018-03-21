@@ -23,7 +23,7 @@ def analysis(riboPt):
     windowP=HTSeq.GenomicInterval(contig,start,end,"+")
     windowM=HTSeq.GenomicInterval(contig,start,end,"-")
 
-    coverage=HTSeq.GenomicArray("auto",stranded=True,typecode="i") #### this line needs to be checked for trna or rbfs
+    coverage=HTSeq.GenomicArray("auto",stranded=True,typecode="i")
         
     for timepoint in timepoints:
         for replicate in replicates:
@@ -36,8 +36,6 @@ def analysis(riboPt):
                 sortedBAMfile=HTSeq.BAM_Reader(bamFile)
                 for alignment in sortedBAMfile:
                     if alignment.aligned:
-                        #print(alignment.iv.length)
-                        #alignment.iv.length = 10 ###### double check if this makes any difference!!!!
                         coverage[ alignment.iv ] += 1
                         
                 # f.3. compute coverage
