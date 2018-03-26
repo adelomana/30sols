@@ -5,26 +5,68 @@
 import sys,numpy,HTSeq
 import multiprocessing,multiprocessing.pool
 
-def analysis(riboPt):
+def analysis(genomicFeature):
 
     '''
     This function computes the histograms of reads across transcript lengths.
     '''
 
-    print('\t building figure for {}...'.format(riboPt))
-    
-    localFeature=genomicFeatures[riboPt]
-    
-    contig=localFeature.iv.chrom
-    start=localFeature.iv.start
-    end=localFeature.iv.end
-    strand=localFeature.iv.strand
+    print('\t computing coverage for {}...'.format(genomicFeature))
 
-    windowP=HTSeq.GenomicInterval(contig,start,end,"+")
-    windowM=HTSeq.GenomicInterval(contig,start,end,"-")
+    
+    # f.1 define window of coverage depending if it's an operon or a gene
+    print('\t\t computing window...')
+    if genomicFeature in riboOperons.keys(): # work with operons
 
+        # obtain the relevant features
+        contigs=[]; starts=[]; ends=[]; strands=[]
+        localGenes=riboOperons[genomicFeature]
+
+        for feature in annotationObject:
+            if feature.type == 'gene':
+                strippedID=feature.attr['ID'].replace('_','')
+                if strippedID in localGenes:
+                    
+                    contig=feature.iv.chrom
+                    start=feature.iv.start-margin
+                    end=feature.iv.end+margin
+                    strand=feature.iv.strand
+
+                    contigs.append(contig); starts.append(start); ends.append(end); strands.append(strand)
+
+        # check consistency of strands
+        if len(list(set(strands))) > 1:
+            print('Detected gene in operon with different orientation. Exiting...')
+            sys.exit()
+            
+        # define positions for coverage computing
+        contig=contigs[0]
+        start=min(starts)-margin
+        end=max(ends)+margin
+        strand=strands[0]
+
+        windowP=HTSeq.GenomicInterval(contig,start,end,"+")
+        windowM=HTSeq.GenomicInterval(contig,start,end,"-")
+
+    else: # work with genes
+        for feature in annotationObject:
+            if feature.type == 'gene':
+                strippedID=feature.attr['ID'].replace('_','')
+                if strippedID == genomicFeature:
+                    break
+        # define positions for coverage computing
+        print(feature)
+        contig=feature.iv.chrom
+        start=feature.iv.start-margin
+        end=feature.iv.end+margin
+        strand=feature.iv.strand
+
+        windowP=HTSeq.GenomicInterval(contig,start,end,"+")
+        windowM=HTSeq.GenomicInterval(contig,start,end,"-")
+
+    # f.2. compute coverage based on window
+    print('\t\t computing coverage...')
     coverage=HTSeq.GenomicArray("auto",stranded=True,typecode="i")
-        
     for timepoint in timepoints:
         for replicate in replicates:
             for experiment in experiments:
@@ -53,9 +95,9 @@ def analysis(riboPt):
                     sys.exit()
 
                 # f.5. writing a file
-                fileName='{}{}.{}.{}.{}.txt'.format(coverageDir,timepoint,replicate,riboPt,experiment)
+                fileName='{}{}.{}.{}.{}.txt'.format(coverageDir,timepoint,replicate,genomicFeature,experiment)
                 f=open(fileName,'w')
-                f.write('# name {}\n'.format(riboPt))
+                f.write('# name {}\n'.format(genomicFeature))
                 f.write('# timepoint {}\n'.format(timepoint))
                 f.write('# replicate {}\n'.format(replicate))
                 f.write('# strand {}\n'.format(strand))
@@ -68,22 +110,50 @@ def analysis(riboPt):
 
     return None
 
-def riboPtNamesReader():
+def dataReader():
 
     '''
-    This function reads the ribosomal protein names.
+    This function reads the ribosomal protein operons and genes.
     '''
 
-    riboPtNames=[]
-    with open(ribosomalProteinsFile,'r') as f:
+    # f.1. ribo-pt gene operons
+    operonPredictions={}
+    fileName=operonPredictionsDir+'riboPtOperons.txt'
+    with open(fileName,'r') as f:
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[0])
+            name=vector[0]
+            genes=[]
+            for i in range(len(vector)-1):
+                gene=vector[i+1].replace('\n','')
+                genes.append(gene)
+            operonPredictions[name]=genes
 
-    riboPtNames.sort()
+    # f.2. non-operon ribo-pt genes
+    NORPGs=[]
+    fileName=operonPredictionsDir+'NORPGs.txt'
+    with open(fileName,'r') as f:
+        next(f)
+        for line in f:
+            vector=line.split('\t')
+            name=vector[0].replace('\n','')
+            NORPGs.append(name)
+
+    # f.3. print information about retrieval
+    a=[]
+    for operon in operonPredictions:
+        for name in operonPredictions[operon]:
+            if name not in a:
+                a.append(name)
+    print('\t Recovered {} genes in {} operons.'.format(len(a),len(operonPredictions)))
+    print('\t Recovered {} genes not in operons.'.format(len(NORPGs)))
+    for name in NORPGs:
+        if name not in a:
+            a.append(name)
+    print('\t Total genes recovered: {}'.format(len(a)))
             
-    return riboPtNames
+    return operonPredictions,NORPGs
 
 ###
 ### MAIN
@@ -92,32 +162,35 @@ def riboPtNamesReader():
 # 0. user defined variables
 bamFilesDir='/proj/omics4tb/alomana/projects/TLR/data/BAM/'
 annotationFile='/proj/omics4tb/alomana/projects/TLR/data/genome/hsa.ASM680v1.edited.gff3'
-ribosomalProteinsFile='/proj/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 coverageDir='/proj/omics4tb/alomana/projects/TLR/data/coverage/'
+operonPredictionsDir='/proj/omics4tb/alomana/projects/TLR/data/microbesOnline/'
 
 timepoints=['tp.1','tp.2','tp.3','tp.4']
 replicates=['rep.1','rep.2','rep.3']
 experiments=['rbf','trna']
 
+margin=100 # excess of base pairs
+
 # 1. read data
-print('reading data...')
-riboPtNames=riboPtNamesReader()
+print('Reading data...')
+riboOperons,NORPGs=dataReader()
 
 # 2. iterate analysis over ribosomal proteins
-print('performing analysis...')
+print('Performing analysis...')
 
 # 2.1. read annotation file
 annotationObject=HTSeq.GFF_Reader(annotationFile)
 
 # 2.2. selecting appropriate genomic locations
-genomicFeatures={}
-for feature in annotationObject:
-    if feature.type == 'gene':
-        strippedID=feature.attr['ID'].replace('_','')
-        if strippedID in riboPtNames:
-            genomicFeatures[strippedID]=feature
+genomicFeatures=list(riboOperons.keys())+NORPGs
 
-# 2.3. iterate over genes in a parallel manner
-numberOfThreads=len(riboPtNames)
+# 2.3.a. iterate over genomicFeatures in a parallel manner
+numberOfThreads=len(genomicFeatures)
+print('Initializing parallel analysis using {} threads...'.format(numberOfThreads))
 hydra=multiprocessing.pool.Pool(numberOfThreads)
-tempo=hydra.map(analysis,riboPtNames)
+tempo=hydra.map(analysis,genomicFeatures)
+
+# 2.3.b. iterate over genomicFeatures single-thread
+#for genomicFeature in genomicFeatures:
+#for genomicFeature in NORPGs:
+#    analysis(genomicFeature)
