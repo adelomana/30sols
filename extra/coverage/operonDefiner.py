@@ -101,8 +101,23 @@ NORPGs=[]
 for name in riboPtNames:
     if name not in found:
         NORPGs.append(name)
+NORPGs.sort()
 
 # 4. saving files
 
 # 4.1. ribo-pt gene operons
+fileName=operonPredictionsDir+'riboPtOperons.txt'
+with open(fileName,'w') as f:
+    f.write('# operonID\tgeneNames\n')
+    for operon in riboOperons:
+        f.write('{}'.format(operon))
+        for name in operonPredictions[operon]:
+            f.write('\t{}'.format(name))
+        f.write('\n')
 
+# 4.2. non-operon ribo-pt genes
+fileName=operonPredictionsDir+'NORPGs.txt'
+with open(fileName,'w') as f:
+    f.write('# This file contains non-operon ribo-pt genes (NORPGs)\n')
+    for name in NORPGs:
+        f.write('{}\n'.format(name))
