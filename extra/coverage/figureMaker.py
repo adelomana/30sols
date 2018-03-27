@@ -15,7 +15,7 @@ def coverageFileReader(dataFileName):
     '''
 
     strand=None; experiment=None
-    pos=[]; cov=[]
+    pos=[]; coverage=[]
     with open(dataFileName,'r') as f:
         for line in f:
             vector=line.split()
@@ -54,19 +54,19 @@ def coverageFileReader(dataFileName):
                         
                 # read columns
                 pos.append(int(vector[0]))
-                cov.append(int(vector[column]))
+                coverage.append(int(vector[column]))
 
     # dealing with positions
     if strand == '-':
         pos=pos[::-1]
     p=numpy.array(pos)
-    normalizedPosition=p-min(p)
+    normalizedPosition=p-min(p)-margin
 
-    print(name,synonyms[name],strand)
+    print(genomicFeature,strand)
 
-    return normalizedPosition,cov
+    return normalizedPosition,coverage
 
-def figureMaker():
+def figureMaker(genomicFeature):
 
     '''
     This function builds a figure of the coverage of reads over genomic features.
@@ -78,8 +78,8 @@ def figureMaker():
             y=[]
             for replicate in replicates:
                 dataFileName='{}{}.{}.{}.{}.txt'.format(coverageDir,timepoint,replicate,genomicFeature,experiment)
-                pos,cov=coverageFileReader(dataFileName)
-                y.append(cov)
+                pos,coverage=coverageFileReader(dataFileName)
+                y.append(coverage)
 
             # compute PDF 
             average=numpy.mean(numpy.array(y),axis=0)
@@ -99,11 +99,11 @@ def figureMaker():
         else:
             flag='Ribo-seq'
         
-        matplotlib.pyplot.title('{} {}'.format(synonyms[name],flag))
+        matplotlib.pyplot.title('{} {}'.format(genomicFeature,flag))
 
         #matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=1,ncol=2,fontsize=14)
 
-        figureName='figures/figure.{}.{}.pdf'.format(synonyms[name],experiment)
+        figureName='figures/figure.{}.{}.pdf'.format(genomicFeature,experiment)
         matplotlib.pyplot.tight_layout()
         matplotlib.pyplot.savefig(figureName)
         matplotlib.pyplot.clf()
@@ -161,12 +161,15 @@ def dataReader():
 
 # 0. user defined variables
 coverageDir='/Volumes/omics4tb/alomana/projects/TLR/data/coverage/'
+operonPredictionsDir='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/'
 
 timepoints=['tp.1','tp.2','tp.3','tp.4']
 replicates=['rep.1','rep.2','rep.3']
 experiments=['rbf','trna']
 
 colors=['red','orange','green','blue']
+
+margin=100 # excess of base pairs
 
 # 1. read data
 print('Reading data...')
@@ -176,5 +179,5 @@ genomicFeatures=list(riboOperons.keys())+NORPGs
 # 2. build figure
 for genomicFeature in genomicFeatures:
     print('building figure for {}...'.format(genomicFeature))
-    figureMaker()
+    figureMaker(genomicFeature)
 print('... completed.')
