@@ -186,9 +186,10 @@ genomicFeatures=list(riboOperons.keys())+NORPGs
 
 # 2.3.a. iterate over genomicFeatures in a parallel manner
 numberOfThreads=len(genomicFeatures)
-print('Initializing parallel analysis using {} threads...'.format(numberOfThreads))
+print('Initialized parallel analysis using {} threads...'.format(numberOfThreads))
 hydra=multiprocessing.pool.Pool(numberOfThreads)
 tempo=hydra.map(analysis,genomicFeatures)
+print('... completed.')
 
 # 2.3.b. iterate over genomicFeatures single-thread
 #for genomicFeature in genomicFeatures:

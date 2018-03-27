@@ -26,9 +26,6 @@ def coverageFileReader(dataFileName):
             if vector[1] == 'experiment':
                 experiment=vector[2]
 
-            #if vector[1] == 'sumP,sumM':
-            #    print(vector)
-
             # f.2. reading the information
             if vector[0] != '#':
                 
@@ -72,7 +69,7 @@ def coverageFileReader(dataFileName):
 def figureMaker():
 
     '''
-    This function builds a figure of the coverage of reads over ribo-pt genes.
+    This function builds a figure of the coverage of reads over genomic features.
     '''
 
     # f.1. read the data
@@ -80,11 +77,9 @@ def figureMaker():
         for timepoint in timepoints:
             y=[]
             for replicate in replicates:
-                dataFileName='{}{}.{}.{}.{}.txt'.format(coverageDir,timepoint,replicate,name,experiment)
+                dataFileName='{}{}.{}.{}.{}.txt'.format(coverageDir,timepoint,replicate,genomicFeature,experiment)
                 pos,cov=coverageFileReader(dataFileName)
                 y.append(cov)
-
-            
 
             # compute PDF 
             average=numpy.mean(numpy.array(y),axis=0)
@@ -115,25 +110,50 @@ def figureMaker():
 
     return None
 
-def riboPtNamesReader():
+def dataReader():
 
     '''
-    This function reads the ribosomal protein names.
+    This function reads the ribosomal protein operons and genes.
     '''
 
-    riboPtNames=[]
-    synonyms={}
-    
-    with open(ribosomalProteinsFile,'r') as f:
+    # f.1. ribo-pt gene operons
+    operonPredictions={}
+    fileName=operonPredictionsDir+'riboPtOperons.txt'
+    with open(fileName,'r') as f:
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[0])
-            synonyms[vector[0]]=vector[2].replace('\n','')
+            name=vector[0]
+            genes=[]
+            for i in range(len(vector)-1):
+                gene=vector[i+1].replace('\n','')
+                genes.append(gene)
+            operonPredictions[name]=genes
 
-    riboPtNames.sort()
+    # f.2. non-operon ribo-pt genes
+    NORPGs=[]
+    fileName=operonPredictionsDir+'NORPGs.txt'
+    with open(fileName,'r') as f:
+        next(f)
+        for line in f:
+            vector=line.split('\t')
+            name=vector[0].replace('\n','')
+            NORPGs.append(name)
+
+    # f.3. print information about retrieval
+    a=[]
+    for operon in operonPredictions:
+        for name in operonPredictions[operon]:
+            if name not in a:
+                a.append(name)
+    print('\t Recovered {} genes in {} operons.'.format(len(a),len(operonPredictions)))
+    print('\t Recovered {} genes not in operons.'.format(len(NORPGs)))
+    for name in NORPGs:
+        if name not in a:
+            a.append(name)
+    print('\t Total genes recovered: {}'.format(len(a)))
             
-    return riboPtNames,synonyms
+    return operonPredictions,NORPGs
 
 ###
 ### MAIN
@@ -141,7 +161,6 @@ def riboPtNamesReader():
 
 # 0. user defined variables
 coverageDir='/Volumes/omics4tb/alomana/projects/TLR/data/coverage/'
-ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 
 timepoints=['tp.1','tp.2','tp.3','tp.4']
 replicates=['rep.1','rep.2','rep.3']
@@ -149,10 +168,13 @@ experiments=['rbf','trna']
 
 colors=['red','orange','green','blue']
 
-# 1. iterate over ribo-pt genes
-riboPtNames,synonyms=riboPtNamesReader()
+# 1. read data
+print('Reading data...')
+riboOperons,NORPGs=dataReader()
+genomicFeatures=list(riboOperons.keys())+NORPGs
 
 # 2. build figure
-for name in riboPtNames:
-    print('building figure for {}...'.format(name))
+for genomicFeature in genomicFeatures:
+    print('building figure for {}...'.format(genomicFeature))
     figureMaker()
+print('... completed.')
