@@ -18,6 +18,8 @@ def analysis(genomicFeature):
     print('\t\t computing window...')
     if genomicFeature in riboOperons.keys(): # work with operons
 
+        print(genomicFeature)
+
         # obtain the relevant features
         contigs=[]; starts=[]; ends=[]; strands=[]
         localGenes=riboOperons[genomicFeature]
@@ -45,6 +47,8 @@ def analysis(genomicFeature):
         end=max(ends)+margin
         strand=strands[0]
 
+        print(start,end)
+
         windowP=HTSeq.GenomicInterval(contig,start,end,"+")
         windowM=HTSeq.GenomicInterval(contig,start,end,"-")
 
@@ -64,6 +68,7 @@ def analysis(genomicFeature):
         windowP=HTSeq.GenomicInterval(contig,start,end,"+")
         windowM=HTSeq.GenomicInterval(contig,start,end,"-")
 
+    """
     # f.2. compute coverage based on window
     print('\t\t computing coverage...')
     coverage=HTSeq.GenomicArray("auto",stranded=True,typecode="i")
@@ -107,6 +112,7 @@ def analysis(genomicFeature):
                 for i in range(len(pos)):
                     f.write('{}\t{}\t{}\n'.format(pos[i],profileP[i],profileM[i]))
                 f.close()
+    """
 
     return None
 
@@ -192,6 +198,6 @@ tempo=hydra.map(analysis,genomicFeatures)
 print('... completed.')
 
 # 2.3.b. iterate over genomicFeatures single-thread
-#for genomicFeature in genomicFeatures:
+for genomicFeature in genomicFeatures:
 #for genomicFeature in NORPGs:
-#    analysis(genomicFeature)
+    analysis(genomicFeature)

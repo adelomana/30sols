@@ -44,12 +44,16 @@ def htseqCounter(sample):
 
 # 0. defining user variables
 bamFilesDir='/Volumes/omics4tb/alomana/projects/TLR/data/BAM/'
-countsDir='/Volumes/omics4tb/alomana/projects/TLR/data/countsArjun/'
-genomeAnnotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/hsa.ASM680v1.edited.gff3'
+countsDir='/Volumes/omics4tb/alomana/projects/TLR/data/counts/'
+genomeAnnotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 numberOfThreads=4
 
 # 1. defining the BAM files
 samples=os.listdir(bamFilesDir)
+
+print(samples)
+samples=[sample for sample in samples if 'rep.1' in sample]
+print(samples)
 
 # 2. calling HTSeq in a parallel environment
 hydra=multiprocessing.pool.Pool(numberOfThreads)
