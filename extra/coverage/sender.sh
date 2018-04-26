@@ -3,9 +3,7 @@
 #$ -N profiler
 #$ -o /proj/omics4tb/alomana/scratch/messages.o.txt
 #$ -e /proj/omics4tb/alomana/scratch/messages.e.txt
-#$ -P Bal_alomana
-#$ -pe serial 25
-#$ -q baliga
+#$ -pe smp 25
 #$ -S /bin/bash
 
 cd /users/alomana

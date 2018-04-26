@@ -26,15 +26,17 @@ def analysis(genomicFeature):
 
         for feature in annotationObject:
             if feature.type == 'gene':
-                strippedID=feature.attr['ID'].replace('_','')
+                strippedID=feature.attr['ID']
                 if strippedID in localGenes:
                     
                     contig=feature.iv.chrom
-                    start=feature.iv.start-margin
-                    end=feature.iv.end+margin
+                    start=feature.iv.start+1
+                    end=feature.iv.end
                     strand=feature.iv.strand
 
                     contigs.append(contig); starts.append(start); ends.append(end); strands.append(strand)
+
+                    print(strippedID)
 
         # check consistency of strands
         if len(list(set(strands))) > 1:
@@ -43,32 +45,43 @@ def analysis(genomicFeature):
             
         # define positions for coverage computing
         contig=contigs[0]
-        start=min(starts)-margin
-        end=max(ends)+margin
+        start=min(starts)
+        end=max(ends)
         strand=strands[0]
 
-        print(start,end)
+        windowStart=start-margin
+        windowEnd=end+margin
 
-        windowP=HTSeq.GenomicInterval(contig,start,end,"+")
-        windowM=HTSeq.GenomicInterval(contig,start,end,"-")
+        windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
+        windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
+
+        print(genomicFeature,start,end,strand,windowStart,windowEnd)
+        print('\t',contigs)
+        print('\t',starts)
+        print('\t',ends)
+        print('\t',strands)
 
     else: # work with genes
         for feature in annotationObject:
             if feature.type == 'gene':
-                strippedID=feature.attr['ID'].replace('_','')
+                strippedID=feature.attr['ID']
                 if strippedID == genomicFeature:
                     break
         # define positions for coverage computing
-        print(feature)
         contig=feature.iv.chrom
-        start=feature.iv.start-margin
-        end=feature.iv.end+margin
+        start=feature.iv.start+1
+        end=feature.iv.end
         strand=feature.iv.strand
 
-        windowP=HTSeq.GenomicInterval(contig,start,end,"+")
-        windowM=HTSeq.GenomicInterval(contig,start,end,"-")
+        windowStart=start-margin
+        windowEnd=end+margin
 
-    """
+        windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
+        windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
+
+        print(genomicFeature,start,end,strand,windowStart,windowEnd)
+
+
     # f.2. compute coverage based on window
     print('\t\t computing coverage...')
     coverage=HTSeq.GenomicArray("auto",stranded=True,typecode="i")
@@ -112,7 +125,6 @@ def analysis(genomicFeature):
                 for i in range(len(pos)):
                     f.write('{}\t{}\t{}\n'.format(pos[i],profileP[i],profileM[i]))
                 f.close()
-    """
 
     return None
 
@@ -189,6 +201,7 @@ annotationObject=HTSeq.GFF_Reader(annotationFile)
 
 # 2.2. selecting appropriate genomic locations
 genomicFeatures=list(riboOperons.keys())+NORPGs
+genomicFeatures.sort()
 
 # 2.3.a. iterate over genomicFeatures in a parallel manner
 numberOfThreads=len(genomicFeatures)
@@ -198,6 +211,6 @@ tempo=hydra.map(analysis,genomicFeatures)
 print('... completed.')
 
 # 2.3.b. iterate over genomicFeatures single-thread
-for genomicFeature in genomicFeatures:
+#for genomicFeature in genomicFeatures:
 #for genomicFeature in NORPGs:
-    analysis(genomicFeature)
+#    analysis(genomicFeature)

@@ -45,18 +45,41 @@ def riboPtNamesReader():
     '''
 
     riboPtNames=[]
-    synonyms={}
     
     with open(ribosomalProteinsFile,'r') as f:
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[0])
-            synonyms[vector[0]]=vector[2].replace('\n','')
+            riboPtNames.append(vector[1])
 
     riboPtNames.sort()
             
-    return riboPtNames,synonyms
+    return riboPtNames
+
+def synonymsReader():
+
+    '''
+    This function reads the GFF3 file and returns a dictionary with synonyms between old and new locus names.
+    '''
+
+    synonyms={}
+    with open(annotationFile,'r') as f:
+        for line in f:
+            vector=line.split('\t')
+            if vector[0][0] != '#':
+                info=vector[-1].replace('\n','')
+                if 'old_locus_tag=' in info:
+                    old=info.split('old_locus_tag=')[1].split(';')[0]
+                    new=info.split('ID=')[1].split(';')[0]
+
+                    if '%' in old:
+                        olds=old.split('%2C')
+                        for element in olds:
+                            synonyms[element]=new
+                    else:
+                        synonyms[old]=new
+                
+    return synonyms
 
 ###
 ### MAIN
@@ -66,14 +89,18 @@ def riboPtNamesReader():
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 operonPredictionsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/operonPredictions.txt'
 operonPredictionsDir='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/'
+annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 
 # 1. read data
 
 # 1.1. ribosomal genes
-riboPtNames,synonyms=riboPtNamesReader()
+riboPtNames=riboPtNamesReader()
 
 # 1.2. operon predictions
 operonPredictions=operonPredictionsReader()
+
+# 1.3. synonyms definer
+synonyms=synonymsReader()
 
 # 2. save ribo-pt operons containing ribo-pt genes
 riboOperons=[]
@@ -112,7 +139,7 @@ with open(fileName,'w') as f:
     for operon in riboOperons:
         f.write('{}'.format(operon))
         for name in operonPredictions[operon]:
-            f.write('\t{}'.format(name))
+            f.write('\t{}'.format(synonyms[name]))
         f.write('\n')
 
 # 4.2. non-operon ribo-pt genes
@@ -120,4 +147,4 @@ fileName=operonPredictionsDir+'NORPGs.txt'
 with open(fileName,'w') as f:
     f.write('# This file contains non-operon ribo-pt genes (NORPGs)\n')
     for name in NORPGs:
-        f.write('{}\n'.format(name))
+        f.write('{}\n'.format(synonyms[name]))
