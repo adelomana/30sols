@@ -167,7 +167,7 @@ def dataReader():
 
 # 0. user defined variables
 bamFilesDir='/proj/omics4tb/alomana/projects/TLR/data/BAM/'
-annotationFile='/proj/omics4tb/alomana/projects/TLR/data/genome/hsa.ASM680v1.edited.gff3'
+annotationFile='/proj/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 coverageDir='/proj/omics4tb/alomana/projects/TLR/data/coverage/'
 operonPredictionsDir='/proj/omics4tb/alomana/projects/TLR/data/microbesOnline/'
 

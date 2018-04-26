@@ -6,10 +6,10 @@ library('DESeq2')
 library('stringr')
 
 # 0. user defined variables
-tag='rbf' # trna / rbf
+tag='trna' # trna / rbf
 earlyTimepointName='tp.1'
-lateTimepointName='tp.3'
-comparison='condition_tp.3_vs_tp.1'
+lateTimepointName='tp.4'
+comparison='condition_tp.4_vs_tp.1'
 
 setwd("~/github/aukera/extra/expression/pipeline.star.htseq-count.deseq2")
 countsDir="/Volumes/omics4tb/alomana/projects/TLR/data/counts"
