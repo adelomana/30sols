@@ -12,13 +12,10 @@ def analysis(genomicFeature):
     '''
 
     print('\t computing coverage for {}...'.format(genomicFeature))
-
     
     # f.1 define window of coverage depending if it's an operon or a gene
     print('\t\t computing window...')
     if genomicFeature in riboOperons.keys(): # work with operons
-
-        print(genomicFeature)
 
         # obtain the relevant features
         contigs=[]; starts=[]; ends=[]; strands=[]
@@ -35,8 +32,6 @@ def analysis(genomicFeature):
                     strand=feature.iv.strand
 
                     contigs.append(contig); starts.append(start); ends.append(end); strands.append(strand)
-
-                    print(strippedID)
 
         # check consistency of strands
         if len(list(set(strands))) > 1:
@@ -55,12 +50,6 @@ def analysis(genomicFeature):
         windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
         windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
 
-        print(genomicFeature,start,end,strand,windowStart,windowEnd)
-        print('\t',contigs)
-        print('\t',starts)
-        print('\t',ends)
-        print('\t',strands)
-
     else: # work with genes
         for feature in annotationObject:
             if feature.type == 'gene':
@@ -78,9 +67,6 @@ def analysis(genomicFeature):
 
         windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
         windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
-
-        print(genomicFeature,start,end,strand,windowStart,windowEnd)
-
 
     # f.2. compute coverage based on window
     print('\t\t computing coverage...')
