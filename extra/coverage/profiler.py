@@ -10,12 +10,14 @@ def analysis(genomicFeature):
     '''
     This function computes the histograms of reads across transcript lengths.
     '''
-
+    
     print('\t computing coverage for {}...'.format(genomicFeature))
     
     # f.1 define window of coverage depending if it's an operon or a gene
     print('\t\t computing window...')
     if genomicFeature in riboOperons.keys(): # work with operons
+
+        print(genomicFeature)
 
         # obtain the relevant features
         contigs=[]; starts=[]; ends=[]; strands=[]
@@ -45,7 +47,7 @@ def analysis(genomicFeature):
         strand=strands[0]
 
         windowStart=start-margin
-        windowEnd=end+margin
+        windowEnd=end+margin+1
 
         windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
         windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
@@ -63,7 +65,7 @@ def analysis(genomicFeature):
         strand=feature.iv.strand
 
         windowStart=start-margin
-        windowEnd=end+margin
+        windowEnd=end+margin+1
 
         windowP=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"+")
         windowM=HTSeq.GenomicInterval(contig,windowStart,windowEnd,"-")
@@ -89,7 +91,7 @@ def analysis(genomicFeature):
                 profileM=list(coverage[windowM])
 
                 # f.4. define genomic positions with respect to strands
-                loc=numpy.arange(start,end)
+                loc=numpy.arange(windowStart,windowEnd)
                 if strand == '+':
                     pos=loc
                 elif strand == '-':
@@ -198,5 +200,4 @@ print('... completed.')
 
 # 2.3.b. iterate over genomicFeatures single-thread
 #for genomicFeature in genomicFeatures:
-#for genomicFeature in NORPGs:
 #    analysis(genomicFeature)
