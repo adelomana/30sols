@@ -33,7 +33,7 @@ def expressionReader():
             vector=line.split(',')
 
             # geneName
-            geneName=vector[0].replace('_','')
+            geneName=vector[0]
             if geneName in riboPtNames:
 
                 for i in range(len(sampleNames)):

@@ -35,7 +35,7 @@ def expressionReader():
             vector=line.split(',')
 
             # geneName
-            geneName=vector[0].replace('_','')
+            geneName=vector[0]
             if geneName in riboPtNames:
 
                 for i in range(len(sampleNames)):
@@ -91,7 +91,9 @@ def riboPtNamesReader():
             
     return riboPtNames
 
+###
 ### MAIN
+###
 
 # 0. user defined variables
 expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
@@ -104,7 +106,6 @@ riboPtNames=riboPtNamesReader()
 expression,sampleTypes,timepoints,replicates=expressionReader()
 
 # 2. process data
-
 # 2.1. empty figure calling to maintain sizes
 matplotlib.pyplot.plot([0,0],[1,1],'ok')
 matplotlib.pyplot.savefig('{}temp.pdf'.format(scratchDir))

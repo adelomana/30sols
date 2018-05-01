@@ -3,12 +3,6 @@
 ### More info, http://markthegraph.blogspot.com/2015/05/using-python-statsmodels-for-ols-linear.html
 ###
 
-#
-#make sure you can color points based on PI border
-#then run all data
-#get lines and plot ribo-pt genes with color accordingly
-
-
 import numpy,sys
 import statsmodels,statsmodels.api,statsmodels.sandbox,statsmodels.sandbox.regression,statsmodels.sandbox.regression.predstd
 
@@ -43,7 +37,7 @@ def expressionReader():
             vector=line.split(',')
 
             # geneName
-            geneName=vector[0].replace('_','')
+            geneName=vector[0]
             if geneName not in geneNames:
                 geneNames.append(geneName)
 
@@ -97,9 +91,8 @@ def regressionAnalysis(x,y):
     model=statsmodels.api.OLS(y,xc)
     fitted=model.fit()
 
-    #print(fitted.params)     # the estimated parameters for the regression line
-    #print(fitted.summary())  # summary statistics for the regression
-
+    print(fitted.params)     # the estimated parameters for the regression line
+    print(fitted.summary())  # summary statistics for the regression
 
     # f.2. interpolate model
     a=x.min()
@@ -189,10 +182,6 @@ for geneName in geneNames:
             riboy.append(z-w)
             orderedRiboNames.append(geneName)
 
-        # just checking some hard-coded values
-        if geneName in ['VNG0433C','VNG1701G','VNG1133G']:
-            print(geneName,x-y,z-w)        
-
 # 2.2. compute regression line and intervals
 regressionLine,CI,PI=regressionAnalysis(numpy.array(ribox),numpy.array(riboy))
 
@@ -202,14 +191,26 @@ matplotlib.pyplot.fill_between(regressionLine[0],CI[1],CI[0],color='black',alpha
 matplotlib.pyplot.fill_between(regressionLine[0],PI[1],PI[0],color='black',alpha=0.1,lw=0)
 
 # 3. define colors of scatter plot ribo-pt genes based on prediction intervals
-matplotlib.pyplot.plot(ribox,riboy,'o',alpha=0.1,mew=0,ms=8,color='black')
+for i in range(len(ribox)):
 
-matplotlib.pyplot.plot(ribox[3],riboy[3],'o',alpha=1,mew=0,ms=8,color='red')
-matplotlib.pyplot.plot(ribox[35],riboy[35],'o',alpha=1,mew=0,ms=8,color='red')
-matplotlib.pyplot.plot(ribox[13],riboy[13],'o',alpha=1,mew=0,ms=8,color='blue')
+    # find the regression point closer to ribox[i] and define the approximate limit from PI
+    distances=[abs(position-ribox[i]) for position in regressionLine[0]]
+    index=distances.index(min(distances))
+    limitTop=PI[0][index]
+    limitBottom=PI[1][index]
 
-for outlier in [3,35,13]:
-    print(orderedRiboNames[outlier],ribox[outlier],riboy[outlier])
+    # check if values are above or below PI
+    if riboy[i] > limitTop:
+        theColor='red'; theAlpha=1
+        print('{} detected as upper outlier at x={}; y={}.'.format(orderedRiboNames[i],ribox[i],riboy[i]))
+    elif riboy[i] < limitBottom:
+        theColor='blue'; theAlpha=1
+        print('{} detected as bottom outlier at x={}; y={}.'.format(orderedRiboNames[i],ribox[i],riboy[i]))
+    else:
+        theColor='black'; theAlpha=0.1
+
+    # plot the point
+    matplotlib.pyplot.plot(ribox[i],riboy[i],'o',alpha=theAlpha,mew=0,ms=8,color=theColor)
 
 # 3.1. close figure
 matplotlib.pyplot.xlim([-5,0.5])
