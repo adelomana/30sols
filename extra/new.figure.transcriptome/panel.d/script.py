@@ -116,26 +116,27 @@ def grapher():
             x.append(numpy.mean([expression['trna'][geneName][timepoint][replicate] for replicate in replicates]))
             y.append(numpy.mean([expression['rbf'][geneName][timepoint][replicate] for replicate in replicates]))
 
-        rnax.append(numpy.median(x))
-        ribox.append(numpy.median(y))
+        # making a log10 transformation of log2 normalized counts
+        rnax.append(numpy.log10(2**numpy.median(x)))
+        ribox.append(numpy.log10(2**numpy.median(y)))
 
     theSize=8
 
     f, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, sharey=True)
     ax1.plot(rnax,rnay,'o',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq')
-    ax1.set_xlim([5,15])
+    ax1.set_xlim([1.5,4.5])
     ax1.set_ylim([-5,0])
-    ax1.set_xlabel('average counts')
+    ax1.set_xlabel('Median over time,')
     ax1.set_ylabel('log$_2$ FC')
-    ax1.set_xticks([6,8,10,12,14])
+    ax1.set_xticks([2,3,4])
     ax1.grid(alpha=0.5, ls=':')
     ax1.legend(framealpha=1,loc=1,ncol=1,fontsize=14)
     
     ax2.plot(ribox,riboy,'o',alpha=0.5,mew=0,ms=theSize,color='red',label='Ribo-seq')
-    ax2.set_xlim([5,15])
+    ax2.set_xlim([1.5,4.5])
     ax2.set_ylim([-5,0])
     ax2.set_xlabel('log$_2$(normalized counts)')
-    ax2.set_xticks([6,8,10,12,14])
+    ax2.set_xticks([2,3,4])
     ax2.grid(alpha=0.5, ls=':')
     ax2.legend(framealpha=1,loc=1,ncol=1,fontsize=14)
     
