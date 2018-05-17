@@ -2,7 +2,7 @@
 ### This script investigates if protein changes can be explained by ribosomal footprints, i.e., translational regulation.
 ###
 
-import numpy,sys,os
+import numpy,sys,os,pandas,seaborn
 
 import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
@@ -91,6 +91,8 @@ def proteomicsDataReader():
     allFiles=os.listdir(proteomicsDataFolder)
     csvFiles=[element for element in allFiles if '.csv' in element and '._' not in element]
 
+    lostGenes=[]
+
     for csvFile in csvFiles:
         path=proteomicsDataFolder+csvFile
 
@@ -118,23 +120,31 @@ def proteomicsDataReader():
             for line in f:
                 vector=line.split(',')
 
-                geneName=vector[0]
-                consider here converting old to new names
-                if geneName not in geneNames:
-                    geneNames.append(geneName)
+                try:
+                    geneName=synonyms[vector[0]]
 
-                a=float(vector[2])
-                b=float(vector[6])
-                c=float(vector[10])
+                    if geneName not in geneNames:
+                        geneNames.append(geneName)
 
-                data[condition][replicate]['tp2vs1'][geneName]=a
-                data[condition][replicate]['tp3vs1'][geneName]=b
-                data[condition][replicate]['tp4vs1'][geneName]=c
+                    a=float(vector[2])
+                    b=float(vector[6])
+                    c=float(vector[10])
 
+                    data[condition][replicate]['tp2vs1'][geneName]=a
+                    data[condition][replicate]['tp3vs1'][geneName]=b
+                    data[condition][replicate]['tp4vs1'][geneName]=c
+                    
+                except:
+                    if vector[0] not in lostGenes:
+                        lostGenes.append(vector[0])
+                
     # sort
     geneNames.sort()
     conditions.sort()
     replicates.sort()
+
+    # print lost genes
+    print('\t {} protein lost because of new annotation.'.format(len(lostGenes)))
     
     return data,geneNames,conditions,replicates,timepoints
 
@@ -153,6 +163,32 @@ def riboPtNamesReader():
             
     return riboPtNames
 
+def synonymsReader():
+
+    '''
+    This function reads the GFF3 file and returns a dictionary with synonyms between old and new locus names.
+    '''
+
+    synonyms={}
+    with open(annotationFile,'r') as f:
+        for line in f:
+            vector=line.split('\t')
+            if vector[0][0] != '#':
+                info=vector[-1].replace('\n','')
+                if 'old_locus_tag=' in info:
+                    old=info.split('old_locus_tag=')[1].split(';')[0]
+                    new=info.split('ID=')[1].split(';')[0]
+
+                    if '%' in old:
+                        olds=old.split('%2C')
+                        for element in olds:
+                            synonyms[element]=new
+                    else:
+                        synonyms[old]=new
+                
+    return synonyms
+
+
 ###
 ### M A I N
 ###
@@ -161,25 +197,22 @@ def riboPtNamesReader():
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
+annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 
-# 1. read data.
+# 1. read data
 print('reading data...')
+
+# 1.1. define synonyms
+synonyms=synonymsReader()
+
+# 1.2. define transcriptome data
 riboPtNames=riboPtNamesReader()
 print('\t reading transcriptome data...')
 expression,expressionSampleTypes,expressionGeneNames,expressionTimepoints,expressionReplicates=expressionReader()
 
-#print(expression)
-print(expressionSampleTypes)
-print(expressionGeneNames[:10])
-print(expressionTimepoints)
-print(expressionReplicates)
-
+# 1.3. define proteomics data
 print('\t reading proteomics data...')
 proteinAbundance,proteinNames,proteinConditions,proteinReplicates,proteinTimepoints=proteomicsDataReader()
-print(proteinNames[:10])
-print(proteinConditions)
-print(proteinReplicates)
-print(proteinTimepoints)
 
 # 2. filter data.
 # Filter data. Remove pt/mRNA/RF whose standard error of the mean is larger than 30%.
@@ -188,8 +221,104 @@ print('filtering data...')
 # 3. analysis
 print('running analysis...')
 
-# 3.1. scatter plot of FC_pt vs FC_mRNA. This figure would reveal how well mRNA explains pt changes.
+# 3.1. violin plot of ribosomal pt along the timepoints
+print('\t building general trends figure...')
+noInfoSet=[]
+foldChanges=[]; timeStamps=[]
+timeStamp=1
+for fraction in proteinConditions:
+    for timepoint in proteinTimepoints:
+        for name in riboPtNames:
+            try:
+                value=numpy.median([proteinAbundance[fraction][replicate][timepoint][name] for replicate in proteinReplicates])
+                foldChanges.append(value); timeStamps.append(timeStamp)
+            except:
+                if name not in noInfoSet:
+                    noInfoSet.append(name)
+                    print('no data for {} {}'.format(timepoint,name))
+        timeStamp=timeStamp+4
+    timeStamp=2
+
+# 3.1.1 create a dataframe for plotting with seaborn
+foldChangeData=list(zip(timeStamps,foldChanges))
+df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
+    
+# 3.1.2. plot violin and swarm plots with seaborn
+ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,color='0.5')
+matplotlib.pyplot.setp(ax.collections, alpha=.5)
+ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,color='black',size=3,zorder=1)
+
+# 3.1.3. final figure closing
+matplotlib.pyplot.grid(alpha=0.5, ls=':')
+matplotlib.pyplot.xlabel('Time point')
+matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
+
+#matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=3,ncol=2,fontsize=14)
+
+figureName='figure.pdf'
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figureName)
+matplotlib.pyplot.clf()    
+        
+            
+sys.exit()
+# 3.2. scatter plot of FC_pt vs FC_mRNA. This figure would reveal how well mRNA explains pt changes.
 print('\t building pt vs mRNA...')
+
+timepointLate=expressionTimepoints[-1]
+timepointEarly=expressionTimepoints[0]
+ptTimepoint='tp4vs1'
+
+for fraction in proteinConditions:
+    for sampleType in expressionSampleTypes:
+
+        print('\t\t working with ',fraction,sampleType)
+        figureFileName='figure.ribo.{}.{}.pdf'.format(fraction,sampleType)
+        x=[]; y=[]
+
+        for name in riboPtNames:
+
+            # compute averages for transcript late
+            a=numpy.mean([expression[sampleType][name][timepointLate][replicate] for replicate in expressionReplicates])
+
+            # compute averages for transcript late
+            b=numpy.mean([expression[sampleType][name][timepointEarly][replicate] for replicate in expressionReplicates])
+
+            # compute log2 fold-change
+            log2fcx=a-b
+
+            # 2.2. compute y-axis, protein
+            log2fcy=None
+
+            try:
+                log2fcy=numpy.median([proteinAbundance[fraction][replicate]['tp4vs1'][name] for replicate in proteinReplicates])
+            except:
+                print('\t\t\t no data for {}'.format(name))
+            
+            # append if valid values are found
+            if log2fcy != None:
+                x.append(log2fcx); y.append(log2fcy)
+
+            # plot
+            matplotlib.pyplot.plot(x,y,'o',alpha=0.5,mew=0,ms=8,color='black')
+            #matplotlib.pyplot.text(x,y,name)
+
+            # labels
+            matplotlib.pyplot.xlabel('Transcript ({}), log$_2$ FC'.format(sampleType))
+            matplotlib.pyplot.ylabel('Protein ({}), log$_2$ FC'.format(fraction))
+
+            matplotlib.pyplot.xlim([-5,0])
+            matplotlib.pyplot.ylim([-3,2])
+            
+
+            # closing figure
+            matplotlib.pyplot.tight_layout()
+            matplotlib.pyplot.axes().set_aspect('equal')
+            matplotlib.pyplot.savefig(figureFileName)
+            matplotlib.pyplot.clf()
+        print()
+        sys.exit()
+ 
 
 # x.2. scatter plot of FC_pt vs FC_RF. This figure would reveal how well RF explains pt changes.
 print('\t building pt vs RF...')

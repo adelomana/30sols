@@ -214,7 +214,7 @@ def riboPtNamesReader():
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[0])
+            riboPtNames.append(vector[1])
             
     return riboPtNames
 
