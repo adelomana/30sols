@@ -185,9 +185,83 @@ def synonymsReader():
                             synonyms[element]=new
                     else:
                         synonyms[old]=new
-                
-    return synonyms
 
+    # reverting mapping
+    synonymsReverseMapping={v: k for k, v in synonyms.items()}
+                
+    return synonyms,synonymsReverseMapping
+
+def violinAnalysis():
+
+    '''
+    This function builds violin plots for protein fold-changes.
+    '''
+
+    countsDict={}
+    noInfoSet=[]
+    foldChanges=[]; timeStamps=[]
+    timeStamp=1
+    for fraction in proteinConditions:
+        for timepoint in proteinTimepoints:
+            count=0
+            for name in riboPtNames:
+            #for name in proteinNames:
+                values=[]
+                for replicate in proteinReplicates:
+                    value=None
+                    try:
+                        value=proteinAbundance[fraction][replicate][timepoint][name]
+                    except:
+                        pass
+                    if value != None:
+                        values.append(value)
+                if len(values) >= 3 :
+                    average=numpy.median(values)
+                    sem=numpy.std(values)/numpy.sqrt(len(values))
+                    rsem=sem/numpy.mean(values)
+                    if rsem < 0.3:
+                        foldChanges.append(value); timeStamps.append(timeStamp)
+                        count=count+1
+                        print(synonymsReverseMapping[name],values,average,sem,count)
+                    else:
+                        print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
+                else:
+                    print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
+                    if name not in noInfoSet:
+                        noInfoSet.append(name)
+                        
+            print('\t found {} proteins in {} {}'.format(count,fraction,timepoint))
+            countsDict[timeStamp]=count
+            timeStamp=timeStamp+2
+        timeStamp=2
+        
+    # create a dataframe for plotting with seaborn
+    foldChangeData=list(zip(timeStamps,foldChanges))
+    df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
+
+    print(countsDict)
+    
+    # plot violin and swarm plots with seaborn
+    ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,palette=['orange','orange','green','green','blue','blue'])
+    matplotlib.pyplot.setp(ax.collections, alpha=0.5)
+    #matplotlib.pyplot.setp(ax.collections, alpha=0.75)
+    ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,size=3,zorder=1,palette=['orange','orange','green','green','blue','blue'])
+
+    # final figure closing
+    matplotlib.pyplot.grid(alpha=0.5, ls=':')
+    matplotlib.pyplot.xlabel('Time point')
+    matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
+    matplotlib.pyplot.ylim([-6,6])
+    generalTickLabels=['t2.FCL','t2.REF','t3.FCL','t3.REF','t4.FCL','t4.REF']
+    specificTickLabels=[generalTickLabels[i]+'\nn={}'.format(countsDict[i+1]) for i in range(len(generalTickLabels))]
+    matplotlib.pyplot.xticks([0,1,2,3,4,5],specificTickLabels)
+
+    figureName='figure.violin.ribo.pdf'
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureName)
+    matplotlib.pyplot.clf()    
+
+    return None
 
 ###
 ### M A I N
@@ -203,7 +277,7 @@ annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC0
 print('reading data...')
 
 # 1.1. define synonyms
-synonyms=synonymsReader()
+synonyms,synonymsReverseMapping=synonymsReader()
 
 # 1.2. define transcriptome data
 riboPtNames=riboPtNamesReader()
@@ -214,56 +288,19 @@ expression,expressionSampleTypes,expressionGeneNames,expressionTimepoints,expres
 print('\t reading proteomics data...')
 proteinAbundance,proteinNames,proteinConditions,proteinReplicates,proteinTimepoints=proteomicsDataReader()
 
-# 2. filter data.
-# Filter data. Remove pt/mRNA/RF whose standard error of the mean is larger than 30%.
-print('filtering data...')
+
 
 # 3. analysis
 print('running analysis...')
 
 # 3.1. violin plot of ribosomal pt along the timepoints
 print('\t building general trends figure...')
-noInfoSet=[]
-foldChanges=[]; timeStamps=[]
-timeStamp=1
-for fraction in proteinConditions:
-    for timepoint in proteinTimepoints:
-        for name in riboPtNames:
-            try:
-                value=numpy.median([proteinAbundance[fraction][replicate][timepoint][name] for replicate in proteinReplicates])
-                foldChanges.append(value); timeStamps.append(timeStamp)
-            except:
-                if name not in noInfoSet:
-                    noInfoSet.append(name)
-                    print('no data for {} {}'.format(timepoint,name))
-        timeStamp=timeStamp+4
-    timeStamp=2
-
-# 3.1.1 create a dataframe for plotting with seaborn
-foldChangeData=list(zip(timeStamps,foldChanges))
-df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
-    
-# 3.1.2. plot violin and swarm plots with seaborn
-ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,color='0.5')
-matplotlib.pyplot.setp(ax.collections, alpha=.5)
-ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,color='black',size=3,zorder=1)
-
-# 3.1.3. final figure closing
-matplotlib.pyplot.grid(alpha=0.5, ls=':')
-matplotlib.pyplot.xlabel('Time point')
-matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
-
-#matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=3,ncol=2,fontsize=14)
-
-figureName='figure.pdf'
-matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig(figureName)
-matplotlib.pyplot.clf()    
+violinAnalysis()
         
-            
-sys.exit()
 # 3.2. scatter plot of FC_pt vs FC_mRNA. This figure would reveal how well mRNA explains pt changes.
 print('\t building pt vs mRNA...')
+
+# make sure that you do rsem filtering here too for pt and transcripts.
 
 timepointLate=expressionTimepoints[-1]
 timepointEarly=expressionTimepoints[0]
