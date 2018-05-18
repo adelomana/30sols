@@ -3,6 +3,7 @@
 ###
 
 import numpy,sys,os,pandas,seaborn
+import scipy,scipy.stats
 
 import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
@@ -295,7 +296,7 @@ print('running analysis...')
 
 # 3.1. violin plot of ribosomal pt along the timepoints
 print('\t building general trends figure...')
-violinAnalysis()
+#violinAnalysis()
         
 # 3.2. scatter plot of FC_pt vs FC_mRNA. This figure would reveal how well mRNA explains pt changes.
 print('\t building pt vs mRNA...')
@@ -310,53 +311,93 @@ for fraction in proteinConditions:
     for sampleType in expressionSampleTypes:
 
         print('\t\t working with ',fraction,sampleType)
-        figureFileName='figure.ribo.{}.{}.pdf'.format(fraction,sampleType)
+        figureFileName='figure.all.{}.{}.pdf'.format(fraction,sampleType)
         x=[]; y=[]
 
-        for name in riboPtNames:
+        #for name in riboPtNames:
+        for name in proteinNames:
 
-            # compute averages for transcript late
-            a=numpy.mean([expression[sampleType][name][timepointLate][replicate] for replicate in expressionReplicates])
-
-            # compute averages for transcript late
-            b=numpy.mean([expression[sampleType][name][timepointEarly][replicate] for replicate in expressionReplicates])
-
-            # compute log2 fold-change
-            log2fcx=a-b
-
-            # 2.2. compute y-axis, protein
-            log2fcy=None
-
+            log2fcx=None; log2fcy=None
+            
             try:
-                log2fcy=numpy.median([proteinAbundance[fraction][replicate]['tp4vs1'][name] for replicate in proteinReplicates])
+                # compute averages for transcript late
+                a=numpy.mean([expression[sampleType][name][timepointLate][replicate] for replicate in expressionReplicates])
+                # compute averages for transcript late
+                b=numpy.mean([expression[sampleType][name][timepointEarly][replicate] for replicate in expressionReplicates])
+                # compute log2 fold-change
+                log2fcx=a-b
             except:
-                print('\t\t\t no data for {}'.format(name))
+                print('\t\t\t no transcript data for {}'.format(name))
+
+            values=[]
+            for replicate in proteinReplicates:
+                value=None
+                try:
+                    value=proteinAbundance[fraction][replicate]['tp4vs1'][name]
+                except:
+                    pass
+                if value != None:
+                    values.append(value)
+                if len(values) >= 3:
+                    average=numpy.median(values)
+                    sem=numpy.std(values)/numpy.sqrt(len(values))
+                    rsem=sem/numpy.mean(values)
+                    if rsem < 0.3:
+                        log2fcy=average
+                    else:
+                        print('\t\t\t loosing {} {} {} {} {} for low precision.'.format(fraction,sampleType,name,values,rsem))
+                else:
+                    print('\t\t\t not enough protein data for {} {}'.format(name,values))
             
             # append if valid values are found
-            if log2fcy != None:
+            if log2fcy != None and log2fcx != None:
                 x.append(log2fcx); y.append(log2fcy)
 
-            # plot
-            matplotlib.pyplot.plot(x,y,'o',alpha=0.5,mew=0,ms=8,color='black')
-            #matplotlib.pyplot.text(x,y,name)
+        # plot data
+        matplotlib.pyplot.plot(x,y,'o',alpha=0.5,mew=0,ms=8,color='black')
 
-            # labels
-            matplotlib.pyplot.xlabel('Transcript ({}), log$_2$ FC'.format(sampleType))
-            matplotlib.pyplot.ylabel('Protein ({}), log$_2$ FC'.format(fraction))
-
-            matplotlib.pyplot.xlim([-5,0])
-            matplotlib.pyplot.ylim([-3,2])
-            
-
-            # closing figure
-            matplotlib.pyplot.tight_layout()
-            matplotlib.pyplot.axes().set_aspect('equal')
-            matplotlib.pyplot.savefig(figureFileName)
-            matplotlib.pyplot.clf()
+        # compute regression
+        slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
+        print('linear regression')
+        print('slope',slope)
+        print('intercept',intercept)
+        print('r_value',r_value)
+        print('pvalue',p_value)
+        print('std_err',std_err)
         print()
-        sys.exit()
- 
 
+        # compute and plot linear regression line
+        resolution=0.1
+        newx=numpy.arange(min(x),max(x),resolution)
+        newy=slope*newx+intercept
+        idx=numpy.where(newy>0)
+
+        matplotlib.pyplot.plot(newx[idx],newy[idx],lw=4,color='red')
+
+        description='R$^2$={:.2f}\np={:.2e}\na={:.2f}'.format(r_value**2,p_value,slope)
+        matplotlib.pyplot.text(-8,-8,description)
+        
+        # labels
+        matplotlib.pyplot.xlabel('Transcript ({}), log$_2$ FC'.format(sampleType))
+        matplotlib.pyplot.ylabel('Protein ({}), log$_2$ FC'.format(fraction))
+        matplotlib.pyplot.title('n={}'.format(len(x)))
+        
+        matplotlib.pyplot.xlim([-8.05,8.05])
+        matplotlib.pyplot.ylim([-8.05,8.05])
+
+        tickPositions=numpy.arange(-8,8+2,2)
+        matplotlib.pyplot.xticks(tickPositions)
+        matplotlib.pyplot.yticks(tickPositions)
+
+        matplotlib.pyplot.grid(alpha=0.5, ls=':')
+            
+        # closing figure
+        matplotlib.pyplot.tight_layout()
+        matplotlib.pyplot.axes().set_aspect('equal')
+        matplotlib.pyplot.savefig(figureFileName)
+        matplotlib.pyplot.clf()
+ 
+sys.exit()
 # x.2. scatter plot of FC_pt vs FC_RF. This figure would reveal how well RF explains pt changes.
 print('\t building pt vs RF...')
 
