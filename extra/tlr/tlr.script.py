@@ -273,6 +273,7 @@ ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGene
 expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+scratchDir='/Volumes/omics4tb/alomana/scratch/'
 
 # 1. read data
 print('reading data...')
@@ -300,6 +301,11 @@ print('\t building general trends figure...')
         
 # 3.2. scatter plot of FC_pt vs FC_mRNA. This figure would reveal how well mRNA explains pt changes.
 print('\t building pt vs mRNA...')
+
+# 2.1. empty figure calling to maintain sizes
+matplotlib.pyplot.plot([0,0],[1,1],'ok')
+matplotlib.pyplot.savefig('{}temp.pdf'.format(scratchDir))
+matplotlib.pyplot.clf()
 
 # make sure that you do rsem filtering here too for pt and transcripts.
 
@@ -370,9 +376,9 @@ for fraction in proteinConditions:
         resolution=0.1
         newx=numpy.arange(min(x),max(x),resolution)
         newy=slope*newx+intercept
-        idx=numpy.where(newy>0)
+        #idx=numpy.where(newy>0)
 
-        matplotlib.pyplot.plot(newx[idx],newy[idx],lw=4,color='red')
+        matplotlib.pyplot.plot(newx,newy,lw=4,color='red')
 
         description='R$^2$={:.2f}\np={:.2e}\na={:.2f}'.format(r_value**2,p_value,slope)
         matplotlib.pyplot.text(-8,-8,description)
