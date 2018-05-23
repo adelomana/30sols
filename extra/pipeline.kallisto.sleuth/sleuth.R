@@ -6,10 +6,10 @@ library('sleuth')
 library('stringr')
 
 # 0. user defined variables
-setwd("~/github/aukera/extra/expression/pipeline.kallisto")
-resultsDir='/Volumes/omics4tb/alomana/projects/TLR/data/kallisto1e3'
-sleuthResultsRBF='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/sleuthResultsRBF.csv'
-sleuthResultsRNA='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/sleuthResultsRNA.csv'
+setwd("~/github/30sols/extra/pipeline.kallisto.sleuth")
+resultsDir='/Volumes/omics4tb/alomana/projects/TLR/data/kallisto'
+sleuthResultsRBF='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/sleuthResultsRBF.41.tetes.csv'
+sleuthResultsRNA='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/sleuthResultsRNA.41.tetes.csv'
 metadataFileRBF='sleuth.metadata.rbf.csv'
 metadataFileRNA='sleuth.metadata.rna.csv'
 

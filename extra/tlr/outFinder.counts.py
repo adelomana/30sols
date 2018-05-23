@@ -160,8 +160,8 @@ for timepoint in expressionTimepoints:
     matplotlib.pyplot.xlabel('mRNA [log$_{2}$ counts]')
     matplotlib.pyplot.ylabel('RF/mRNA [log$_{2}$ ratio]')
 
-    matplotlib.pyplot.xlim([-0.1,20])
-    matplotlib.pyplot.ylim([-5,13])
+    #matplotlib.pyplot.xlim([-0.1,20])
+    #matplotlib.pyplot.ylim([-5,13])
 
     matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
 

@@ -1,6 +1,7 @@
 import sys
 import matplotlib,matplotlib.pyplot
 import numpy,numpy.linalg
+import scipy,scipy.stats
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 
@@ -60,7 +61,7 @@ theColor['tp.3']='green'
 theColor['tp.4']='blue'
 
 # 0.1. paths
-transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression/expressionMatrix.kallisto.txt'
+transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression1e3/expressionMatrix.kallisto.txt'
 scratchDir='/Volumes/omics4tb/alomana/scratch/'
 
 # 1. reading data
@@ -82,7 +83,7 @@ sat=[]
 
 for timepoint in timepoints:
 
-    figureName='figures/outfinder.{}.pdf'.format(timepoint)
+    figureName='figures/outfinder.new.{}.pdf'.format(timepoint)
 
     setx=[]; sety=[]
     hollowx=[]; hollowy=[]
@@ -116,7 +117,20 @@ for timepoint in timepoints:
     c=solution[1]
     expected=list(m*numpy.array(setx)+c)
 
-    print(m,c)
+    print('m and c',m,c)
+
+    # second regression
+    print('second regression...')
+    slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(setx,sety)
+    print('linear regression')
+    print('slope',slope)
+    print('intercept',intercept)
+    print('r_value',r_value)
+    print('pvalue',p_value)
+    print('std_err',std_err)
+    print()
+
+    
 
     # computed from Matt Wall on log2
     ### satx=2**(numpy.array(setx))-1
@@ -135,13 +149,15 @@ for timepoint in timepoints:
     
     matplotlib.pyplot.plot(setx,expected,'-',lw=2,color=theColor[timepoint])
 
-    print(numpy.max(setx))
+    print('x',numpy.min(setx),numpy.max(setx))
+    print('y',numpy.min(hollowy),numpy.max(sety))
+    print()
     
     matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
     matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ ratio]')
 
-    matplotlib.pyplot.xlim([-0.1,5.2])
-    matplotlib.pyplot.ylim([-15,5.25])
+    matplotlib.pyplot.xlim([-0.1,5.3])
+    matplotlib.pyplot.ylim([-15.2,8.4])
 
     matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
 
@@ -150,7 +166,7 @@ for timepoint in timepoints:
     matplotlib.pyplot.clf()
 
 # plotting the saturation effect
-figureName='figures/saturation.pdf'
+figureName='figures/saturation.new.pdf'
 theColors=['red','orange','green','blue']
 
 for i in range(len(sat)):
