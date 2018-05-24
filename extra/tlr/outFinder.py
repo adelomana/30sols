@@ -5,6 +5,87 @@ import scipy,scipy.stats
 
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 
+def DETreader():
+
+    '''
+    This function reads the DETs from sleuth and provides a dictionary as 
+    DETs[timepoint][geneName]=1/-1
+    DETs of abs(FC) < 2 and max expression < 10 TPMs will be excluded.
+    '''
+
+    DETs={}
+    # iterate over each time point to retrieve the DETs
+    for timepoint in timepoints[1:]:
+        DETs[timepoint]={}            
+
+        flag=timepoint[-1]+'1'
+        fileName='sleuthResultsRNA.{}.csv'.format(flag)
+        filePath=DETsDir+fileName
+
+        with open(filePath,'r') as f:
+            next(f)
+            for line in f:
+                vector=line.split(',')
+                ncName=vector[1].replace('"','')
+                geneName=NCsynonyms[ncName]
+
+                # filter out abs(FC) < 2 or max expression < 10 TPMs
+                rna0=numpy.mean([rnaExpression['trna'][replicate]['tp.1'][geneName] for replicate in replicates])
+                rna1=numpy.mean([rnaExpression['trna'][replicate][timepoint][geneName] for replicate in replicates])
+                log2fc=numpy.log2(rna1/rna0)
+
+                if abs(log2fc) > 1 and numpy.max([rna0,rna1]) > 10:
+                    if log2fc > 0:
+                        flag=1
+                    else:
+                        flag=-1
+                    DETs[timepoint][geneName]=flag
+
+    return DETs
+
+def dotColorFinder(timepoint,geneName,cloudType):
+
+    '''
+    This function defines dot colors depending on being a DET.
+    '''
+
+    if timepoint == 'tp.1':
+        dotColor='noColor'
+    else:
+        
+        if geneName not in DETs[timepoint].keys():
+            dotColor='noColor'
+        else:
+            if DETs[timepoint][geneName] == 1:
+                dotColor='red'
+            elif DETs[timepoint][geneName] == -1:
+                dotColor='blue'
+            else:
+                print('error')
+                sys.exit()
+    
+
+    return dotColor
+
+def NCsynonymsReader():
+
+    '''
+    This function builds a dictionary on the synonyms from NC to RS.
+    '''
+
+    NCsynonyms={}
+    with open(transcriptomeAnnotationFile,'r') as f:
+        for line in f:
+            if line[0] == '>':
+                vector=line.split(' ')
+                ncName=vector[0].replace('>','')
+                for element in vector:
+                    if 'locus_tag' in element:
+                        rsName=element.split('locus_tag=')[1].replace(']','').replace('_','')
+                NCsynonyms[ncName]=rsName
+
+    return NCsynonyms
+
 def transcriptomicsReader():
 
     '''
@@ -52,6 +133,9 @@ def transcriptomicsReader():
     
     return data,geneNames,timepoints,replicates
 
+###
+### MAIN
+###
 
 # 0. user defined variables
 theColor={}
@@ -62,6 +146,8 @@ theColor['tp.4']='blue'
 
 # 0.1. paths
 transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression1e3/expressionMatrix.kallisto.txt'
+transcriptomeAnnotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/transcriptome/NC_002607.1.cs.NC_001869.1.cs.NC_002608.1.fasta'
+DETsDir='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/'
 scratchDir='/Volumes/omics4tb/alomana/scratch/'
 
 # 1. reading data
@@ -70,16 +156,20 @@ print('reading data...')
 # 1.1. reading mRNA data
 rnaExpression,geneNames,timepoints,replicates=transcriptomicsReader()
 
-# 2. computing the figure
+# 1.2. read DETs
+NCsynonyms=NCsynonymsReader()
+DETs=DETreader()
+
+# 2. perform analysis
 print('computing the analysis...')
 
-# 2.1. empty figure calling to maintain sizes
+# 2.0. empty figure calling to maintain sizes
 matplotlib.pyplot.plot([0,0],[1,1],'ok')
 matplotlib.pyplot.savefig('{}temp.pdf'.format(scratchDir))
 matplotlib.pyplot.clf()
 
-# 2.1. remove outliers
-sat=[]
+# 2.1. build figures on general pattern
+sat=[] # needed for second part of the script, the pattern model
 
 for timepoint in timepoints:
 
@@ -87,6 +177,7 @@ for timepoint in timepoints:
 
     setx=[]; sety=[]
     hollowx=[]; hollowy=[]
+    cloudColors=[]; groundColors=[]
     
     for geneName in geneNames:
         
@@ -96,41 +187,55 @@ for timepoint in timepoints:
             mRNA_TPMs.append(rnaExpression['trna'][replicate][timepoint][geneName])
             footprint_TPMs.append(rnaExpression['rbf'][replicate][timepoint][geneName])
             
-        # data transformations 
-        m=numpy.median(mRNA_TPMs); f=numpy.median(footprint_TPMs)
-        
-        log2m=numpy.log2(m+1)
-        log10m=numpy.log10(m+1)
-        log2f=numpy.log2(f+1)
-        r=log2f-log2m
+        # data transformations and quality check
+        log2M=numpy.log2(numpy.array(mRNA_TPMs)+1)
+        log10M=numpy.log10(numpy.array(mRNA_TPMs)+1)
+        log2F=numpy.log2(numpy.array(footprint_TPMs)+1)
 
-        if f == 0:
-            hollowx.append(log10m); hollowy.append(r)
+        # noise
+        if numpy.max(log2M) > numpy.log2(11): # if expression is below 10 TPMs, don't consider noise
+            sem=numpy.std(log2M)/numpy.sqrt(len(log2M))
+            rsem_mRNA=sem/numpy.mean(log2M)
         else:
-            setx.append(log10m); sety.append(r)
+            rsem_RNA=0
+            
+        if numpy.max(log2F) > numpy.log2(11): # if expression is below 10 TPMs, don't consider noise
+            sem=numpy.std(log2F)/numpy.sqrt(len(log2F))
+            rsem_RF=sem/numpy.mean(log2F)
+        else:
+            rsem_RF=0
+        
+        # medians and ratio
+        m=numpy.median(log10M);
+        r=numpy.median(log2F)-numpy.median(log2M)
 
-    # performing regression analysis
-    A=numpy.vstack([setx,numpy.ones(len(setx))]).T
-    solution,residuals,rank,s=numpy.linalg.lstsq(A,sety)
+        # filter useful data
+        if numpy.median(footprint_TPMs) == 0:
+            if rsem_mRNA < 0.3:
+                hollowx.append(m); hollowy.append(r)
+                dotColor=dotColorFinder(timepoint,geneName,'ground')
+                groundColors.append(dotColor)
+        else:
+            if rsem_mRNA < 0.3 and rsem_RF < 0.3:        
+                setx.append(m); sety.append(r)
+                dotColor=dotColorFinder(timepoint,geneName,'cloud')
+                cloudColors.append(dotColor)
 
-    m=solution[0]
-    c=solution[1]
-    expected=list(m*numpy.array(setx)+c)
-
-    print('m and c',m,c)
-
-    # second regression
-    print('second regression...')
+    # perform regression analysis
+    print('\t regression results...')
     slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(setx,sety)
-    print('linear regression')
-    print('slope',slope)
-    print('intercept',intercept)
-    print('r_value',r_value)
-    print('pvalue',p_value)
-    print('std_err',std_err)
+    print('\t linear regression')
+    print('\t slope',slope)
+    print('\t intercept',intercept)
+    print('\t r_value',r_value)
+    print('\t pvalue',p_value)
+    print('\t std_err',std_err)
     print()
 
-    
+    # compute for the model
+    m=slope
+    c=intercept
+    expected=list(m*numpy.array(setx)+c)
 
     # computed from Matt Wall on log2
     ### satx=2**(numpy.array(setx))-1
@@ -143,18 +248,20 @@ for timepoint in timepoints:
 
     sat.append([list(satx),list(saty)])
         
-    # plotting
-    matplotlib.pyplot.plot(setx,sety,'o',alpha=0.1,mew=0,color='black')
-    matplotlib.pyplot.plot(hollowx,hollowy,'o',alpha=0.1,mew=0,color='tab:brown')
+    # plot figure
+    for i in range(len(setx)):
+        if cloudColors[i] != 'noColor':
+            matplotlib.pyplot.plot(setx[i],sety[i],'o',alpha=0.5,mew=0,color=cloudColors[i])
+    for i in range(len(hollowx)):
+        if groundColors[i] != 'noColor':
+            matplotlib.pyplot.plot(hollowx[i],hollowy[i],'o',alpha=0.5,mew=0,color=groundColors[i])
     
-    matplotlib.pyplot.plot(setx,expected,'-',lw=2,color=theColor[timepoint])
-
-    print('x',numpy.min(setx),numpy.max(setx))
-    print('y',numpy.min(hollowy),numpy.max(sety))
-    print()
+    matplotlib.pyplot.plot(setx,expected,'-',lw=1,color=theColor[timepoint])
     
     matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
     matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ ratio]')
+
+    matplotlib.pyplot.title('n = {}'.format(len(setx)))
 
     matplotlib.pyplot.xlim([-0.1,5.3])
     matplotlib.pyplot.ylim([-15.2,8.4])
@@ -165,7 +272,7 @@ for timepoint in timepoints:
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()
 
-# plotting the saturation effect
+# 2.2. plot pattern from model
 figureName='figures/saturation.new.pdf'
 theColors=['red','orange','green','blue']
 
