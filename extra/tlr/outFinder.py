@@ -261,7 +261,7 @@ for timepoint in timepoints:
     matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
     matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ ratio]')
 
-    matplotlib.pyplot.title('n = {}'.format(len(setx)))
+    #matplotlib.pyplot.title('n = {}'.format(len(setx)))
 
     matplotlib.pyplot.xlim([-0.1,5.3])
     matplotlib.pyplot.ylim([-15.2,8.4])
