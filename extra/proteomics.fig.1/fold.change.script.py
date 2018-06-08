@@ -131,13 +131,13 @@ def violinAnalysis():
     This function builds violin plots for protein fold-changes.
     '''
 
-    countsDict={}
-    noInfoSet=[]
-    foldChanges=[]; timeStamps=[]
-    timeStamp=1
+    foldChangesFCL=[]; timeStampsFCL=[]; foldChangesREF=[]; timeStampsREF=[]
+    
     for fraction in proteinConditions:
+        timeStamp=0
         for timepoint in proteinTimepoints:
-            count=0
+            timeStamp=timeStamp+1
+            totalN=0
             for name in riboPtNames:
                 values=[]
                 for replicate in proteinReplicates:
@@ -153,40 +153,57 @@ def violinAnalysis():
                     sem=numpy.std(values)/numpy.sqrt(len(values))
                     rsem=sem/numpy.mean(values)
                     if rsem < 0.3:
-                        foldChanges.append(value); timeStamps.append(timeStamp)
-                        if value > 0:
-                            print('values',fraction,timepoint,name,value)
-                        count=count+1
-                        #print(synonymsReverseMapping[name],values,average,sem,count)
+                        totalN=totalN+1
+                        if fraction == 'lysate':
+                            foldChangesFCL.append(value); timeStampsFCL.append(timeStamp)
+                        else:
+                            foldChangesREF.append(value); timeStampsREF.append(timeStamp)
+                        #if value > 0:
+                        #    print('high value',fraction,timepoint,name,value)
                     else:
                         print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
                 else:
                     print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
-                    if name not in noInfoSet:
-                        noInfoSet.append(name)
-                        
-            print('\t found {} proteins in {} {}'.format(count,fraction,timepoint))
-            countsDict[timeStamp]=count
-            timeStamp=timeStamp+2
-        timeStamp=2
-        
+            print(totalN)
+
+    matplotlib.pyplot.subplot(121)
+    yLimits=[-4.5,1.5]
+    
     # create a dataframe for plotting with seaborn
-    foldChangeData=list(zip(timeStamps,foldChanges))
+    foldChangeData=list(zip(timeStampsFCL,foldChangesFCL))
     df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
     
     # plot violin and swarm plots with seaborn
-    ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,palette=['orange','orange','green','green','blue','blue'])
+    ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,palette=['orange','green','blue'])
     matplotlib.pyplot.setp(ax.collections, alpha=0.5)
-    ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,size=3,zorder=1,palette=['orange','orange','green','green','blue','blue'])
+    ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,size=3,zorder=1,palette=['orange','green','blue'])
+
+    # aesthetics
+    matplotlib.pyplot.grid(alpha=0.5, ls=':')
+    matplotlib.pyplot.xlabel('Time point')
+    matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
+    matplotlib.pyplot.ylim(yLimits)
+
+    matplotlib.pyplot.subplot(122)
+
+    # create a dataframe for plotting with seaborn
+    foldChangeData=list(zip(timeStampsREF,foldChangesREF))
+    df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
+    
+    # plot violin and swarm plots with seaborn
+    ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,palette=['orange','green','blue'])
+    matplotlib.pyplot.setp(ax.collections, alpha=0.5)
+    ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,size=3,zorder=1,palette=['orange','green','blue'])
 
     # final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
-    matplotlib.pyplot.ylim([-6,6])
+    matplotlib.pyplot.ylim(yLimits)
     generalTickLabels=['t2.FCL','t2.REF','t3.FCL','t3.REF','t4.FCL','t4.REF']
-    specificTickLabels=[generalTickLabels[i]+'\nn={}'.format(countsDict[i+1]) for i in range(len(generalTickLabels))]
-    matplotlib.pyplot.xticks([0,1,2,3,4,5],specificTickLabels)
+
+    #specificTickLabels=[generalTickLabels[i]+'\nn={}'.format(countsDict[i+1]) for i in range(len(generalTickLabels))]
+    #matplotlib.pyplot.xticks([0,1,2,3,4,5],specificTickLabels)
 
     figureName='figure.violin.ribo.pdf'
     matplotlib.pyplot.tight_layout()
