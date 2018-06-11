@@ -106,16 +106,29 @@ def figureGrapher(colorAssociation):
             stoichInfo[timeLabel]={}
             
         for ribopt in riboPtNames:
-            try:
-                x=numpy.median([data[condition][replicate][timepoints[i]][ribopt] for replicate in replicates])
-                foldChangeInfo[timeLabel][ribopt]=2**x
-            except:
-                if ribopt not in noInfoSet:
-                    noInfoSet.append(ribopt)
-                    print('no data for {} {}'.format(timepoints[i],ribopt))
+            values=[]
+            for replicate in replicates:
+                value=None
+                try:
+                    value=data[condition][replicate][timepoints[i]][ribopt]
+                except:
+                    pass
+                if value != None:
+                    values.append(value)
+            if len(values) >= 3 :
+                average=numpy.median(values)
+                sem=numpy.std(values)/numpy.sqrt(len(values))
+                rsem=sem/numpy.mean(values)
+                if rsem < 0.3: 
+                    foldChangeInfo[timeLabel][ribopt]=2**average
+                else:
+                    print('\t\t\t loosing {} for low precision: {} {}'.format(ribopt,values,rsem))
+            else:
+                 print('\t\t loosing {} for not enough replicates: {}'.format(ribopt,values))                
 
         # f.2.1. compute the stoichiometry per time point
         localNames=list(foldChangeInfo[timeLabel].keys())
+        print('{} {} n = {}'.format(timeLabel,condition,len(localNames)))
         allFractions=[foldChangeInfo[timeLabel][localName] for localName in localNames]
         theSum=sum(allFractions)
         stoich=(numpy.array(allFractions)/theSum)*len(allFractions)
@@ -185,8 +198,8 @@ def figureGrapher(colorAssociation):
         if name in colorAssociation:
             matplotlib.pyplot.plot(x,y,'o',color=colorAssociation[name],ms=theDotSize*2.5,mew=0)
         else:
-            matplotlib.pyplot.plot(x,y,'o',color='black',ms=theDotSize*2.5,mew=0)
-            matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
+            matplotlib.pyplot.plot(x,y,'o',color='black',ms=theDotSize,mew=0)
+            #matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
     # f.8. final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')

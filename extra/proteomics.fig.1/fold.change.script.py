@@ -158,13 +158,13 @@ def violinAnalysis():
                             foldChangesFCL.append(value); timeStampsFCL.append(timeStamp)
                         else:
                             foldChangesREF.append(value); timeStampsREF.append(timeStamp)
-                        #if value > 0:
-                        #    print('high value',fraction,timepoint,name,value)
+                        if value > 0:
+                            print('high value',fraction,timepoint,name,value)
                     else:
                         print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
                 else:
                     print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
-            print(totalN)
+            print('{} {} n = {}'.format(fraction, timepoint,totalN))
 
     matplotlib.pyplot.subplot(121)
     yLimits=[-4.5,1.5]
