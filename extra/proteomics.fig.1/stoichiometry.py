@@ -77,12 +77,18 @@ def figureGrapher(colorAssociation):
     '''
 
     print('\nanalysis of condition {}...'.format(condition))
+
+    # f.0. empty figure calling to maintain sizes
+    matplotlib.pyplot.plot([0,0],[1,1],'ok')
+    matplotlib.pyplot.savefig('{}temp.pdf'.format(scratchDir))
+    matplotlib.pyplot.clf()
     
     # f.1. initialize variables
     noInfoSet=[]
     
     foldChangeInfo={} # dictionary with all information about fold-change: foldChangeInfo[timePointLabel][riboPtName]=value (fold-change)
     stoichInfo={} # dictionary with all information about stoichiometry: stoichInfo[timePointLabel][riboPtName]=value (log2 stoichiometry value)
+    noisyStoichInfo={} # dictionary with all information about stoichiometry that did not pass relative standard error of the mean threshold
 
     timeStampsViolin=[]; stoichValuesViolin=[]
     timeStampsSwarm=[]; stoichValuesSwarm=[]
@@ -104,6 +110,9 @@ def figureGrapher(colorAssociation):
 
         if timeLabel not in stoichInfo:
             stoichInfo[timeLabel]={}
+
+        if timeLabel not in noisyStoichInfo:
+            noisyStoichInfo[timeLabel]={}
             
         for ribopt in riboPtNames:
             values=[]
@@ -122,6 +131,7 @@ def figureGrapher(colorAssociation):
                 if rsem < 0.3: 
                     foldChangeInfo[timeLabel][ribopt]=2**average
                 else:
+                    noisyStoichInfo[timeLabel][ribopt]=rsem
                     print('\t\t\t loosing {} for low precision: {} {}'.format(ribopt,values,rsem))
             else:
                  print('\t\t loosing {} for not enough replicates: {}'.format(ribopt,values))                
@@ -186,7 +196,10 @@ def figureGrapher(colorAssociation):
             for i in range(len(timepoints)):
                 timeLabel=timePointLabels[i+1]
                 x.append(i+1)
-                y.append(stoichInfo[timeLabel][name])
+                try:
+                    y.append(stoichInfo[timeLabel][name])
+                except:
+                    y.append(noisyStoichInfo[timeLabel][name])
             if name not in colorAssociation:
                 colorAssociation[name]=matplotlib.cm.tab10(len(colorAssociation))
             matplotlib.pyplot.plot(x,y,':',color=colorAssociation[name],lw=3,zorder=0,label=nameAliases[name])
@@ -202,9 +215,10 @@ def figureGrapher(colorAssociation):
             #matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
     # f.8. final figure closing
+    matplotlib.pyplot.ylim([-2.2,2.2])
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
-    matplotlib.pyplot.ylabel('Stoichiometry (log$_2$ ribo-pt)')
+    matplotlib.pyplot.ylabel('Ribosome composition (log$_2$ ribo-pt stoichiometry)')
     matplotlib.pyplot.title(condition)
 
     matplotlib.pyplot.legend(markerscale=1.5,framealpha=1,loc=3,ncol=2,fontsize=14)
@@ -238,6 +252,7 @@ def riboPtNamesReader():
 # 0. user defined variables
 dataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
+scratchDir='/Volumes/omics4tb/alomana/scratch/'
 
 timePointLabels=['TP1','TP2','TP3','TP4']
 theDotSize=3

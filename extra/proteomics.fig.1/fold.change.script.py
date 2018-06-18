@@ -132,12 +132,17 @@ def violinAnalysis():
     '''
 
     foldChangesFCL=[]; timeStampsFCL=[]; foldChangesREF=[]; timeStampsREF=[]
+    violinStructure={}; violinNames={}
     
     for fraction in proteinConditions:
         timeStamp=0
         for timepoint in proteinTimepoints:
             timeStamp=timeStamp+1
-            totalN=0
+
+            label=fraction+timepoint
+            if label not in violinStructure:
+                violinStructure[label]=[]; violinNames[label]=[]
+                
             for name in riboPtNames:
                 values=[]
                 for replicate in proteinReplicates:
@@ -153,18 +158,25 @@ def violinAnalysis():
                     sem=numpy.std(values)/numpy.sqrt(len(values))
                     rsem=sem/numpy.mean(values)
                     if rsem < 0.3:
-                        totalN=totalN+1
+                        
+                        violinStructure[label].append(value); violinNames[label]=name
+
                         if fraction == 'lysate':
                             foldChangesFCL.append(value); timeStampsFCL.append(timeStamp)
                         else:
                             foldChangesREF.append(value); timeStampsREF.append(timeStamp)
                         if value > 0:
-                            print('high value',fraction,timepoint,name,value)
+                            print('FC>0: ',fraction,timepoint,name,value)
                     else:
                         print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
                 else:
                     print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
-            print('{} {} n = {}'.format(fraction, timepoint,totalN))
+            localList=violinStructure[label]
+            cv=numpy.std(localList)/numpy.mean(localList)
+            print('{}; n = {}; median = {}; cv = {}'.format(label,len(localList),numpy.median(localList),cv))
+
+            # define outliers
+            #outliersDefiner(violinStructure[label],violinNames[label])
 
     matplotlib.pyplot.subplot(121)
     yLimits=[-4.5,1.5]
