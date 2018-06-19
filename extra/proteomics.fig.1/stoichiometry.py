@@ -164,6 +164,9 @@ def figureGrapher(colorAssociation):
             timeStampsViolin.append(timeLabel); stoichValuesViolin.append(v)
             if v > high or v < low:
 
+                #print('value = {}; stoich = {}, significance found for {} on {}'.format(v,2**v,localNames[i],timeLabel))
+                print('{};{};{};{}'.format(v,2**v,localNames[i],timeLabel))
+
                 if localNames[i] not in significantPositions:
                     significantPositions[localNames[i]]=[[],[]]
                 significantPositions[localNames[i]][0].append(timePointLabels.index(timeLabel))
