@@ -1,4 +1,4 @@
-import sys
+import sys,math
 import matplotlib,matplotlib.pyplot
 import numpy,numpy.linalg
 import scipy,scipy.stats
@@ -29,7 +29,7 @@ def DETreader():
                 ncName=vector[1].replace('"','')
                 geneName=NCsynonyms[ncName]
 
-                # filter out abs(FC) < 2 or max expression < 10 TPMs
+                # filter out abs(log2FC) < 1 or max expression < 10 TPMs
                 rna0=numpy.mean([rnaExpression['trna'][replicate]['tp.1'][geneName] for replicate in replicates])
                 rna1=numpy.mean([rnaExpression['trna'][replicate][timepoint][geneName] for replicate in replicates])
                 log2fc=numpy.log2(rna1/rna0)
@@ -66,6 +66,108 @@ def dotColorFinder(timepoint,geneName,cloudType):
     
 
     return dotColor
+
+def transcriptSetsDistributionAnalyzer():
+
+    '''
+    This function builds a figure with the distribution of distances from expected model, across different levels of expression, for three different sets of transcripts: all, no DET, DET+ and DET-.
+    '''
+
+    print('\t working on transcript distance distributions from expected...')
+
+    # f.1. build a dictionary of dictionaries with the following structure:
+    # distSets[1|2|3|4|5][all|noDET|DET+|DET-]=list of y distance to regression line
+
+    for geneName in expSet:
+
+        # recovering information
+        mRNA=expSet[geneName][0]
+        r=expSet[geneName][1]
+
+        colorLabel=expSet[geneName][2]
+        if colorLabel == 'noColor':
+            subset='b.noDET'
+        if colorLabel == 'red':
+            subset='c.DET+'
+        if colorLabel == 'blue':
+            subset='d.DET-'
+
+        # deal with expression range
+        ceiling=math.ceil(mRNA)
+        
+        # deal with distance to diagonal
+        expected=m*mRNA+c
+        distance=r-expected
+
+        # append the distance into structure
+        if ceiling not in distSets.keys():
+            distSets[ceiling]={}
+
+        if 'a.all' not in distSets[ceiling].keys():
+            distSets[ceiling]['a.all']=[]
+        if 'b.noDET' not in distSets[ceiling].keys():
+            distSets[ceiling]['b.noDET']=[]
+        if 'c.DET+' not in distSets[ceiling].keys():
+            distSets[ceiling]['c.DET+']=[]
+        if 'd.DET-' not in distSets[ceiling].keys():
+            distSets[ceiling]['d.DET-']=[]
+
+        distSets[ceiling]['a.all'].append(distance)
+        distSets[ceiling][subset].append(distance)
+
+    # f.2. build the figure
+    expressionBoxes=list(distSets.keys())
+    expressionBoxes.sort()
+    subsets=list(distSets[expressionBoxes[0]].keys())
+    subsets.sort()
+
+    # create a dataframe for plotting with seaborn
+    pos=0
+    deviations=[]
+    posStamps=[]
+    numberEvents=[]
+    for box in expressionBoxes:
+        for subset in subsets:
+            pos=pos+1
+            rank=len(distSets[box][subset])
+            numberEvents.append(rank)
+            
+            # add values if they match the regions
+            if rank >= 10 and box in [2,3,4]: # no boxplots for less than 10 observations
+                values=[]
+                for element in distSets[box][subset]:
+                    values.append(element)
+                deviations.append(values)
+                posStamps.append(pos)
+
+    # build boxplots
+    bp=matplotlib.pyplot.boxplot(deviations,positions=posStamps,showfliers=False,patch_artist=True)
+    matplotlib.pyplot.setp(bp['boxes'],facecolor='blue',alpha=0.5)
+
+    # define ticklabels
+    singlePalette=['grey','white','red','blue']
+    fullPalette=[];tickLabels=[]
+    for i in range(expressionBoxes[-1]+1): 
+        for j in range(len(singlePalette)):
+            fullPalette.append(singlePalette[j])
+            tickLabels.append('{}\n{}'.format(numberEvents[i*4+j],i))
+    
+    # aesthetics
+    matplotlib.pyplot.grid(alpha=0.5, ls=':')
+    matplotlib.pyplot.xlabel('Subsets')
+    matplotlib.pyplot.ylabel('log$_2$ Deviation')
+
+    # labels
+    matplotlib.pyplot.xticks([element+1 for element in range(len(tickLabels))],tickLabels,fontsize=6)
+
+    figureName='figure.evidence.{}.pdf'.format(timepoint)
+    matplotlib.pyplot.tight_layout()
+    matplotlib.pyplot.savefig(figureName)
+    matplotlib.pyplot.clf()
+
+    sys.exit()
+
+    return distSets
 
 def NCsynonymsReader():
 
@@ -178,6 +280,8 @@ for timepoint in timepoints:
     setx=[]; sety=[]
     hollowx=[]; hollowy=[]
     cloudColors=[]; groundColors=[]
+    expSet={}
+    distSets={} # to be constructed in transcriptSetsDistributionAnalyzer
     
     for geneName in geneNames:
         
@@ -215,22 +319,22 @@ for timepoint in timepoints:
                 hollowx.append(m); hollowy.append(r)
                 dotColor=dotColorFinder(timepoint,geneName,'ground')
                 groundColors.append(dotColor)
+                expSet[geneName]=[m,r,dotColor]
         else:
             if rsem_mRNA < 0.3 and rsem_RF < 0.3:        
                 setx.append(m); sety.append(r)
                 dotColor=dotColorFinder(timepoint,geneName,'cloud')
                 cloudColors.append(dotColor)
+                expSet[geneName]=[m,r,dotColor]
 
     # perform regression analysis
-    print('\t regression results...')
+    print('\t regression results:')
     slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(setx,sety)
-    print('\t linear regression')
-    print('\t slope',slope)
-    print('\t intercept',intercept)
-    print('\t r_value',r_value)
-    print('\t pvalue',p_value)
-    print('\t std_err',std_err)
-    print()
+    print('\t\t slope',slope)
+    print('\t\t intercept',intercept)
+    print('\t\t r_value',r_value)
+    print('\t\t pvalue',p_value)
+    print('\t\t std_err',std_err)
 
     # compute for the model
     m=slope
@@ -272,7 +376,14 @@ for timepoint in timepoints:
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()
 
+    # 2.2. build distribution of transcript sets (all, no DETs, DET+ and DET-) per log10 expression units
+    if timepoint != 'tp.1':
+        transcriptSetsDistributionAnalyzer()
+
+    print('\t completed analysis per time point.\n')
+
 # 2.2. plot pattern from model
+print('working on model building...')
 figureName='figures/saturation.new.pdf'
 theColors=['red','orange','green','blue']
 
@@ -287,3 +398,6 @@ matplotlib.pyplot.ylabel('predicted footprint [TPM]')
 matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.savefig(figureName)
 matplotlib.pyplot.clf()
+
+# 3. final message
+print('... all done. Bless!')
