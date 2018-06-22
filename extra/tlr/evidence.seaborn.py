@@ -159,7 +159,7 @@ def transcriptSetsDistributionAnalyzer():
             
             # add values for pandas dataframe
             if rank >= 10 and box in [2,3,4]: # no boxplots for less than 10 observations
-            #if rank >= 0: # no boxplots for less than 10 observations
+            #if rank >= 0: # no boxplots for less than 10 observations 
                 for element in distSets[box][subset]:
                     deviations.append(element)
                     posStamps.append(pos)
