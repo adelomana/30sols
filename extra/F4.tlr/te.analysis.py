@@ -1,3 +1,11 @@
+###
+### This script generates
+### (PLOT1) a plot with all time point  observations plus all slopes.
+### (PLOT2) a plot with the model from the slopes.
+### (PLOT3) a colored plot with differential expression (red/blue).
+### (PLOT4) a control for length of transcript and translational efficiency.
+### 
+
 import sys,math,pandas,seaborn
 import matplotlib,matplotlib.pyplot
 import numpy,numpy.linalg
@@ -64,7 +72,6 @@ def dotColorFinder(timepoint,geneName,cloudType):
                 print('error')
                 sys.exit()
     
-
     return dotColor
 
 def transcriptSetsDistributionAnalyzer():
@@ -198,10 +205,8 @@ def transcriptSetsDistributionAnalyzer():
     # this line needs to go AFTER "labels" otherwise, it's ignored... Weird.
     ax.set_xlim(9.1,23.9)
 
-    #
-
     # close figure
-    figureName='figure.evidence.{}.seaborn.pdf'.format(timepoint)
+    figureName='figures/TE.blocks.{}.seaborn.pdf'.format(timepoint)
     matplotlib.pyplot.tight_layout()
     matplotlib.pyplot.savefig(figureName)
     matplotlib.pyplot.clf()
@@ -214,10 +219,18 @@ def NCsynonymsReader():
     This function builds a dictionary on the synonyms from NC to RS.
     '''
 
-    NCsynonyms={}
+    NCsynonyms={}; transcriptLengths={}
+    
+    firstLine=True
     with open(transcriptomeAnnotationFile,'r') as f:
         for line in f:
             if line[0] == '>':
+
+                # append final length
+                if firstLine == False:
+                    transcriptLengths[rsName]=numpy.log10(transcriptLength)
+
+                # obtain synonyms
                 vector=line.split(' ')
                 ncName=vector[0].replace('>','')
                 for element in vector:
@@ -225,7 +238,17 @@ def NCsynonymsReader():
                         rsName=element.split('locus_tag=')[1].replace(']','').replace('_','')
                 NCsynonyms[ncName]=rsName
 
-    return NCsynonyms
+                # reset transcript length
+                transcriptLength=0
+                
+            else:
+                firstLine=False
+                v=list(line)
+
+                transcriptLength=transcriptLength+len(v)-1
+        transcriptLengths[rsName]=numpy.log10(transcriptLength)
+
+    return NCsynonyms,transcriptLengths
 
 def transcriptomicsReader():
 
@@ -298,7 +321,7 @@ print('reading data...')
 rnaExpression,geneNames,timepoints,replicates=transcriptomicsReader()
 
 # 1.2. read DETs
-NCsynonyms=NCsynonymsReader()
+NCsynonyms,transcriptLengths=NCsynonymsReader()
 DETs=DETreader()
 
 # 2. perform analysis
@@ -312,12 +335,18 @@ matplotlib.pyplot.clf()
 # 2.1. build figures on general pattern
 sat=[] # needed for second part of the script, the pattern model
 
+totalSetx=[]; totalSety=[]; totalHollowx=[]; totalHollowy=[]; regressions=[]
+lengthControl=[]; lengthControlHollow=[]; lengthControlRegressions=[]
+
+highestExpression=0
+
 for timepoint in timepoints:
 
-    figureName='figures/outfinder.new.{}.pdf'.format(timepoint)
+    figureName='figures/TE.generalTrend.color.{}.pdf'.format(timepoint)
 
     setx=[]; sety=[]
     hollowx=[]; hollowy=[]
+    lengthx=[]
     cloudColors=[]; groundColors=[]
     expSet={}
     distSets={} # to be constructed in transcriptSetsDistributionAnalyzer
@@ -336,13 +365,13 @@ for timepoint in timepoints:
         log2F=numpy.log2(numpy.array(footprint_TPMs)+1)
 
         # noise
-        if numpy.max(log2M) > numpy.log2(11): # if expression is below 10 TPMs, don't consider noise
+        if numpy.max(log2M) > numpy.log2(10+1): # if expression is below 10 TPMs, don't consider noise
             sem=numpy.std(log2M)/numpy.sqrt(len(log2M))
             rsem_mRNA=sem/numpy.mean(log2M)
         else:
             rsem_RNA=0
             
-        if numpy.max(log2F) > numpy.log2(11): # if expression is below 10 TPMs, don't consider noise
+        if numpy.max(log2F) > numpy.log2(10+1): # if expression is below 10 TPMs, don't consider noise
             sem=numpy.std(log2F)/numpy.sqrt(len(log2F))
             rsem_RF=sem/numpy.mean(log2F)
         else:
@@ -355,17 +384,30 @@ for timepoint in timepoints:
         # filter useful data
         if numpy.median(footprint_TPMs) == 0:
             if rsem_mRNA < 0.3:
+
                 hollowx.append(m); hollowy.append(r)
+                totalHollowx.append(m); totalHollowy.append(r)
+                lengthControlHollow.append([transcriptLengths[geneName],r])
+                
                 dotColor=dotColorFinder(timepoint,geneName,'ground')
                 groundColors.append(dotColor)
                 expSet[geneName]=[m,r,dotColor]
         else:
             if rsem_mRNA < 0.3 and rsem_RF < 0.3:        
+
                 setx.append(m); sety.append(r)
+                totalSetx.append(m); totalSety.append(r)                
+
+                lengthx.append(transcriptLengths[geneName])
+                lengthControl.append([transcriptLengths[geneName],r])
+                
                 dotColor=dotColorFinder(timepoint,geneName,'cloud')
                 cloudColors.append(dotColor)
                 expSet[geneName]=[m,r,dotColor]
 
+
+    if max(setx) > highestExpression:
+        highestExpression=max(setx)
     # perform regression analysis
     print('\t regression results:')
     slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(setx,sety)
@@ -375,16 +417,28 @@ for timepoint in timepoints:
     print('\t\t pvalue',p_value)
     print('\t\t std_err',std_err)
 
+    print('\t regression for length control:')
+    slopeL,interceptL,r_valueL,p_valueL,std_errL=scipy.stats.linregress(lengthx,sety)
+    print('\t\t slope',slopeL)
+    print('\t\t intercept',interceptL)
+    print('\t\t r_value',r_valueL)
+    print('\t\t pvalue',p_valueL)
+    print('\t\t std_err',std_errL)
+
     # compute for the model
     m=slope
     c=intercept
     expected=list(m*numpy.array(setx)+c)
+    regressions.append([slope,intercept])
+
+    # length model
+    lengthControlRegressions.append([slopeL,interceptL])
 
     # computed from Matt Wall on log2
     ### satx=2**(numpy.array(setx))-1
     ### saty=(2**c)*((satx+1)**(1+m))-1
 
-    # computed ALO on log10 for x
+    # computed ALO on log10 for x #!!! check model
     satx=(10**numpy.array(setx))-1
     factor=m*numpy.log10(satx+1) + c + numpy.log2(satx+1)
     saty=(2**(factor))-1
@@ -404,8 +458,6 @@ for timepoint in timepoints:
     matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
     matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ ratio]')
 
-    #matplotlib.pyplot.title('n = {}'.format(len(setx)))
-
     matplotlib.pyplot.xlim([-0.1,5.3])
     matplotlib.pyplot.ylim([-15.2,8.4])
 
@@ -421,9 +473,27 @@ for timepoint in timepoints:
 
     print('\t completed analysis per time point.\n')
 
+print('building figure for all time points...')
+matplotlib.pyplot.plot(totalSetx,totalSety,'o',alpha=0.0333,mew=0,color='black')
+matplotlib.pyplot.plot(totalHollowx,totalHollowy,'o',alpha=0.0333,mew=0,color='tan')
+for i in range(len(regressions)):
+    m=regressions[i][0]; c=regressions[i][1]
+    floor=numpy.arange(0,highestExpression+0.1,0.1)
+    e=list(m*numpy.array(floor)+c)
+    matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
+
+matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.ylabel('log$_{2}$ TE')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+    
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig('figures/TE.generalTrend.all.pdf')
+matplotlib.pyplot.clf()
+
 # 2.2. plot pattern from model
 print('working on model building...')
-figureName='figures/saturation.new.pdf'
+
+figureName='figures/TE.model.pdf'
 theColors=['red','orange','green','blue']
 
 for i in range(len(sat)):
@@ -438,5 +508,40 @@ matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.savefig(figureName)
 matplotlib.pyplot.clf()
 
-# 3. final message
+# 3. build figure of TE (y-axis) and transcript length (x-axis)
+print('building relationship between transcript length and TE...')
+
+x=[]; y=[]
+shortTranscript=10000; longTranscript=0
+
+for element in lengthControl:
+    x.append(element[0])
+    y.append(element[1])
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
+if min(x) < shortTranscript:
+    shortTranscript=min(x)
+if max(x) > longTranscript:
+    longTranscript=max(x)
+
+x=[]; y=[]
+for element in lengthControlHollow:
+    x.append(element[0])
+    y.append(element[1])
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
+ 
+for i in range(len(lengthControlRegressions)):
+    m=lengthControlRegressions[i][0]; c=lengthControlRegressions[i][1]
+    floor=numpy.arange(shortTranscript,longTranscript+0.1,0.1)
+    e=list(m*numpy.array(floor)+c)
+    matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
+
+matplotlib.pyplot.xlabel('transcript length (log$_{10}$ bp)')
+matplotlib.pyplot.ylabel('log$_{2}$ TE')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+    
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig('figures/TE.length.control.pdf')
+matplotlib.pyplot.clf()
+
+# 4. final message
 print('... all done. Bless!')
