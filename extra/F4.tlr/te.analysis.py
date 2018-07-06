@@ -74,6 +74,23 @@ def dotColorFinder(timepoint,geneName,cloudType):
     
     return dotColor
 
+def halfLifesReader():
+
+    '''
+    This function reads the half lifes of transcripts.
+    '''
+
+    halfLifes={}
+    with open(halfLifesFile,'r') as f:
+        next(f)
+        for line in f:
+            v=line.split()
+            geneName=v[0].replace('_','')
+            value=float(v[1])
+            halfLifes[geneName]=value
+
+    return halfLifes
+
 def transcriptSetsDistributionAnalyzer():
 
     '''
@@ -312,6 +329,7 @@ theColor['tp.4']='blue'
 transcriptomicsDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/expression1e3/expressionMatrix.kallisto.txt'
 transcriptomeAnnotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/transcriptome/NC_002607.1.cs.NC_001869.1.cs.NC_002608.1.fasta'
 DETsDir='/Volumes/omics4tb/alomana/projects/TLR/data/sleuth1e3/'
+halfLifesFile='/Volumes/omics4tb/alomana/projects/TLR/data/halfLife/formattedHalfLifes.strains.txt'
 scratchDir='/Volumes/omics4tb/alomana/scratch/'
 
 # 1. reading data
@@ -323,6 +341,9 @@ rnaExpression,geneNames,timepoints,replicates=transcriptomicsReader()
 # 1.2. read DETs
 NCsynonyms,transcriptLengths=NCsynonymsReader()
 DETs=DETreader()
+
+# 1.3. read half-lifes
+halfLifes=halfLifesReader()
 
 # 2. perform analysis
 print('computing the analysis...')
@@ -337,6 +358,7 @@ sat=[] # needed for second part of the script, the pattern model
 
 totalSetx=[]; totalSety=[]; totalHollowx=[]; totalHollowy=[]; regressions=[]
 lengthControl=[]; lengthControlHollow=[]; lengthControlRegressions=[]
+degControl=[]; degControlHollow=[]; degControlRegressions=[]
 
 highestExpression=0
 
@@ -350,6 +372,7 @@ for timepoint in timepoints:
     cloudColors=[]; groundColors=[]
     expSet={}
     distSets={} # to be constructed in transcriptSetsDistributionAnalyzer
+    degx=[]; degy=[]
     
     for geneName in geneNames:
         
@@ -388,6 +411,10 @@ for timepoint in timepoints:
                 hollowx.append(m); hollowy.append(r)
                 totalHollowx.append(m); totalHollowy.append(r)
                 lengthControlHollow.append([transcriptLengths[geneName],r])
+                try:
+                    degControlHollow.append([halfLifes[geneName],r])
+                except:
+                    pass
                 
                 dotColor=dotColorFinder(timepoint,geneName,'ground')
                 groundColors.append(dotColor)
@@ -400,11 +427,15 @@ for timepoint in timepoints:
 
                 lengthx.append(transcriptLengths[geneName])
                 lengthControl.append([transcriptLengths[geneName],r])
+                try:
+                    degControl.append([halfLifes[geneName],r])
+                    degx.append(halfLifes[geneName]); degy.append(r)
+                except:
+                    pass
                 
                 dotColor=dotColorFinder(timepoint,geneName,'cloud')
                 cloudColors.append(dotColor)
                 expSet[geneName]=[m,r,dotColor]
-
 
     if max(setx) > highestExpression:
         highestExpression=max(setx)
@@ -425,6 +456,14 @@ for timepoint in timepoints:
     print('\t\t pvalue',p_valueL)
     print('\t\t std_err',std_errL)
 
+    print('\t regression for half-life control:')
+    slopeHL,interceptHL,r_valueHL,p_valueHL,std_errHL=scipy.stats.linregress(degx,degy)
+    print('\t\t slope',slopeHL)
+    print('\t\t intercept',interceptHL)
+    print('\t\t r_value',r_valueHL)
+    print('\t\t pvalue',p_valueHL)
+    print('\t\t std_err',std_errHL)
+
     # compute for the model
     m=slope
     c=intercept
@@ -433,6 +472,9 @@ for timepoint in timepoints:
 
     # length model
     lengthControlRegressions.append([slopeL,interceptL])
+
+    # degradation model
+    degControlRegressions.append([slopeHL,interceptHL])
 
     # computed from Matt Wall on log2
     ### satx=2**(numpy.array(setx))-1
@@ -543,5 +585,46 @@ matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.savefig('figures/TE.length.control.pdf')
 matplotlib.pyplot.clf()
 
-# 4. final message
+# 4. build figure of TE (y-axis) and transcript half-life (x-axis)
+print('building relationship between half-life...')
+
+# 4.1. main analysis
+x=[]; y=[]
+fast=10000; slow=0
+
+for element in degControl:
+    x.append(element[0])
+    y.append(element[1])
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
+
+if min(x) < fast:
+    fast=min(x)
+if max(x) > slow:
+    slow=max(x)
+
+x=[]; y=[]
+for element in degControlHollow:
+    x.append(element[0])
+    y.append(element[1])
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
+
+for i in range(len(degControlRegressions)):
+    m=degControlRegressions[i][0]; c=degControlRegressions[i][1]
+    floor=numpy.arange(fast,slow+0.1,0.1)
+    e=list(m*numpy.array(floor)+c)
+    matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
+
+matplotlib.pyplot.xlim([0,25])
+
+matplotlib.pyplot.xlabel('half-life (min)')
+matplotlib.pyplot.ylabel('log$_{2}$ TE')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+    
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig('figures/TE.half-life.control.pdf')
+matplotlib.pyplot.clf()
+
+# 4.2. histogram of half-lifes
+
+# 5. final message
 print('... all done. Bless!')
