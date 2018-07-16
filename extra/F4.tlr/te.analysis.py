@@ -418,7 +418,8 @@ for timepoint in timepoints:
                 try:
                     degControlHollow.append([halfLifes[geneName],r])
                     degExpControl.append([halfLifes[geneName],m])
-                    degExpx.append(halfLifes[geneName]); degExpy.append(m)
+                    if halfLifes[geneName] < 25:
+                        degExpx.append(m); degExpy.append(halfLifes[geneName])
                 except:
                     pass
                 
@@ -437,7 +438,8 @@ for timepoint in timepoints:
                     degControl.append([halfLifes[geneName],r])
                     degx.append(halfLifes[geneName]); degy.append(r)
                     degExpControl.append([halfLifes[geneName],m])
-                    degExpx.append(halfLifes[geneName]); degExpy.append(m)
+                    if halfLifes[geneName] < 25:
+                        degExpx.append(m); degExpy.append(halfLifes[geneName])
                 except:
                     pass
                 
@@ -644,28 +646,28 @@ matplotlib.pyplot.savefig('figures/TE.half-life.control.pdf')
 matplotlib.pyplot.clf()
 
 # 4.2. half-life/expression relationship
-x=[]; y=[]
-fast=10000; slow=0
+time=[]; exp=[]
+low=10000; high=0
 
 for element in degExpControl:
-    x.append(element[0])
-    y.append(element[1])
-matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
+    if element[0] < 25:
+        time.append(element[0])
+        exp.append(element[1])
+matplotlib.pyplot.plot(exp,time,'o',alpha=0.0333,mew=0,color='black')
 
-if min(x) < fast:
-    fast=min(x)
-if max(x) > slow:
-    slow=max(x)
+if min(exp) < low:
+    low=min(exp)
+if max(exp) > high:
+    high=max(exp)
 
 for i in range(len(degExpRegressions)):
     m=degExpRegressions[i][0]; c=degExpRegressions[i][1]
-    floor=numpy.arange(fast,slow+0.1,0.1)
+    floor=numpy.arange(low,high+0.1,0.1)
     e=list(m*numpy.array(floor)+c)
-    matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
+    #matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
 
-matplotlib.pyplot.xlim([0,25])
-matplotlib.pyplot.xlabel('half-life (min)')
-matplotlib.pyplot.ylabel('log$_{10}$ TPM')
+matplotlib.pyplot.ylabel('half-life (min)')
+matplotlib.pyplot.xlabel('log$_{10}$ TPM')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
     
 matplotlib.pyplot.tight_layout()

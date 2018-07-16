@@ -166,7 +166,7 @@ def violinAnalysis():
                         else:
                             foldChangesREF.append(value); timeStampsREF.append(timeStamp)
                         if value > 0:
-                            print('FC>0: ',fraction,timepoint,name,value)
+                            print('FC > 0: ',fraction,timepoint,name,value)
                     else:
                         print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
                 else:
