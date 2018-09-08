@@ -145,7 +145,7 @@ def figureGrapher(colorAssociation):
         log2Stoich=numpy.log2(stoich)
         for j in range(len(localNames)):
             stoichInfo[timeLabel][localNames[j]]=log2Stoich[j]
-
+             
         # f.2.2. finding the limits of 95% of the distribution
         zp=1.959963984540 # taken from https://en.wikipedia.org/wiki/Normal_distribution
         mean=numpy.mean(log2Stoich)
