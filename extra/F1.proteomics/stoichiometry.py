@@ -225,7 +225,7 @@ def figureGrapher(colorAssociation):
             #matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
     # f.8. final figure closing
-    matplotlib.pyplot.ylim([-2.2,2.2])
+    #matplotlib.pyplot.ylim([-2.2,2.2])
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Ribosome composition (log$_2$ ribo-pt stoichiometry)')

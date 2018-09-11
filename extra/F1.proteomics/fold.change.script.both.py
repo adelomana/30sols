@@ -135,6 +135,7 @@ def violinAnalysis():
     violinStructure={}; violinNames={}
     
     for fraction in proteinConditions:
+        
         timeStamp=0
         for timepoint in proteinTimepoints:
             timeStamp=timeStamp+1
@@ -178,10 +179,11 @@ def violinAnalysis():
             # define outliers
             #outliersDefiner(violinStructure[label],violinNames[label])
 
-    ###yLimits=[-4.5,1.5]
+    matplotlib.pyplot.subplot(121)
+    yLimits=[-4.5,1.5]
     
     # create a dataframe for plotting with seaborn
-    foldChangeData=list(zip(timeStampsREF,foldChangesREF))
+    foldChangeData=list(zip(timeStampsFCL,foldChangesFCL))
     df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
     
     # plot violin and swarm plots with seaborn
@@ -193,14 +195,25 @@ def violinAnalysis():
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
-    #matplotlib.pyplot.ylim(yLimits)
+    matplotlib.pyplot.ylim(yLimits)
+
+    matplotlib.pyplot.subplot(122)
+
+    # create a dataframe for plotting with seaborn
+    foldChangeData=list(zip(timeStampsREF,foldChangesREF))
+    df=pandas.DataFrame(data=foldChangeData,columns=['Time points','Fold change'])
+    
+    # plot violin and swarm plots with seaborn
+    ax=seaborn.violinplot(x='Time points',y='Fold change',data=df,inner=None,linewidth=0,palette=['orange','green','blue'])
+    matplotlib.pyplot.setp(ax.collections, alpha=0.5)
+    ax=seaborn.swarmplot(x='Time points',y='Fold change',data=df,size=3,zorder=1,palette=['orange','green','blue'])
 
     # final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
-    #matplotlib.pyplot.ylim(yLimits)
-    #generalTickLabels=['t2.FCL','t2.REF','t3.FCL','t3.REF','t4.FCL','t4.REF']
+    matplotlib.pyplot.ylim(yLimits)
+    generalTickLabels=['t2.FCL','t2.REF','t3.FCL','t3.REF','t4.FCL','t4.REF']
 
     #specificTickLabels=[generalTickLabels[i]+'\nn={}'.format(countsDict[i+1]) for i in range(len(generalTickLabels))]
     #matplotlib.pyplot.xticks([0,1,2,3,4,5],specificTickLabels)

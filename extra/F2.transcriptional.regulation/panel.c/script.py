@@ -86,6 +86,9 @@ def grapher():
     rnax=[]; rnay=[]
     ribox=[]; riboy=[]
 
+    hdg_FC=[]; hdg_E=[]    # highly-downregulated group
+    dg_FC=[]; dg_E=[]      # downregulated group
+
     for geneName in riboPtNames:
 
         # f.1. computing the FCs
@@ -120,10 +123,26 @@ def grapher():
         rnax.append(numpy.log10(2**numpy.median(x)))
         ribox.append(numpy.log10(2**numpy.median(y)))
 
+        # f.3. descriptive statistics for two groups
+        if rnaFC < -3:
+            hdg_FC.append(rnaFC)
+            hdg_E.append(numpy.log10(2**numpy.median(x)))
+            #print(riboPtMap[geneName],'\t',rnaFC)
+        else:
+            dg_FC.append(rnaFC)
+            dg_E.append(numpy.log10(2**numpy.median(x)))
+            print(riboPtMap[geneName],'\t',rnaFC)
+
+    # printing the statistics            
+    print('average HDG:',len(hdg_FC),numpy.median(hdg_FC),numpy.median(hdg_E),10**numpy.median(hdg_E))
+    print('average DG:',len(dg_FC),numpy.median(dg_FC),numpy.median(dg_E),10**numpy.median(dg_E))
+
+    # making the figure
+        
     theSize=8
 
     f, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, sharey=True)
-    ax1.plot(rnax,rnay,'o',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq')
+    ax1.plot(rnax,rnay,'o',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq')    
     ax1.set_xlim([1.5,4.5])
     ax1.set_ylim([-5,0])
     ax1.set_xlabel('Median over time,')
@@ -154,13 +173,15 @@ def riboPtNamesReader():
     '''
 
     riboPtNames=[]
+    riboPtMap={}
     with open(ribosomalProteinsFile,'r') as f:
         next(f)
         for line in f:
             vector=line.split('\t')
             riboPtNames.append(vector[0])
+            riboPtMap[vector[0]]=vector[1]
             
-    return riboPtNames
+    return riboPtNames,riboPtMap
 
 ### MAIN
 
@@ -170,7 +191,7 @@ expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalize
 
 # 1. read the data
 print('reading data...')
-riboPtNames=riboPtNamesReader()
+riboPtNames,riboPtMap=riboPtNamesReader()
 expression,sampleTypes,timepoints,replicates=expressionReader()
 
 # 2. plot the data
