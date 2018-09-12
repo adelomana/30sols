@@ -8,6 +8,24 @@ import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
 matplotlib.rcParams['pdf.fonttype']=42
 
+def annotationReader():
+
+    '''
+    This function reads the annotation of microbes online and return a diccionary with GI identifiers to be used in DAVID 6.7 (these IDs are not recognized by DAVID 6.8).
+    '''
+
+    annotationMap={}
+
+    with open(annotationFile,'r') as f:
+        next(f)
+        for line in f:
+            v=line.split('\t')
+            GI=v[2]
+            sysName=v[7]
+            annotationMap[sysName]=GI
+
+    return annotationMap
+
 def expressionReader():
 
     '''
@@ -127,11 +145,11 @@ def grapher():
         if rnaFC < -3:
             hdg_FC.append(rnaFC)
             hdg_E.append(numpy.log10(2**numpy.median(x)))
-            #print(riboPtMap[geneName],'\t',rnaFC)
+            print('group B','\t',riboPtMap[geneName],'\t',annotationMap[riboPtMap[geneName]],'\t',rnaFC)
         else:
             dg_FC.append(rnaFC)
             dg_E.append(numpy.log10(2**numpy.median(x)))
-            print(riboPtMap[geneName],'\t',rnaFC)
+            print('group A','\t',riboPtMap[geneName],'\t',annotationMap[riboPtMap[geneName]],'\t',rnaFC)
 
     # printing the statistics            
     print('average HDG:',len(hdg_FC),numpy.median(hdg_FC),numpy.median(hdg_E),10**numpy.median(hdg_E))
@@ -188,11 +206,14 @@ def riboPtNamesReader():
 # 0. user defined variables
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
+annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/genome.annotation.txt'
 
 # 1. read the data
 print('reading data...')
 riboPtNames,riboPtMap=riboPtNamesReader()
 expression,sampleTypes,timepoints,replicates=expressionReader()
+
+annotationMap=annotationReader()
 
 # 2. plot the data
 print('plotting data...')
