@@ -145,12 +145,19 @@ def figureGrapher(colorAssociation):
         log2Stoich=numpy.log2(stoich)
         for j in range(len(localNames)):
             stoichInfo[timeLabel][localNames[j]]=log2Stoich[j]
-
+             
         # f.2.2. finding the limits of 95% of the distribution
         zp=1.959963984540 # taken from https://en.wikipedia.org/wiki/Normal_distribution
         mean=numpy.mean(log2Stoich)
         standardDeviation=numpy.std(log2Stoich)
         low=mean-standardDeviation; high=mean+standardDeviation
+
+        # IQ
+        #Q1=numpy.percentile(log2Stoich,25)
+        #Q3=numpy.percentile(log2Stoich,75)
+        #iqr=Q3-Q1
+        #low=Q1-(1.5*iqr)
+        #high=Q3+(1.5*iqr)
         
         margin=0.2
         a=i+1-margin
@@ -165,7 +172,7 @@ def figureGrapher(colorAssociation):
             if v > high or v < low:
 
                 #print('value = {}; stoich = {}, significance found for {} on {}'.format(v,2**v,localNames[i],timeLabel))
-                print('{};{};{};{}'.format(v,2**v,localNames[i],timeLabel))
+                print('log2FC={} \t FC={} \t localName={} \t timeLabel={}'.format(v,2**v,nameAliases[localNames[i]],timeLabel))
 
                 if localNames[i] not in significantPositions:
                     significantPositions[localNames[i]]=[[],[]]
@@ -218,7 +225,7 @@ def figureGrapher(colorAssociation):
             #matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
     # f.8. final figure closing
-    matplotlib.pyplot.ylim([-2.2,2.2])
+    #matplotlib.pyplot.ylim([-2.2,2.2])
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Ribosome composition (log$_2$ ribo-pt stoichiometry)')
@@ -239,14 +246,17 @@ def riboPtNamesReader():
     This function reads the ribosomal protein names.
     '''
 
-    riboPtNames=[]
+    riboPtNames=[]; nameAliases={}
     with open(ribosomalProteinsFile,'r') as f:
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[1])
+            riboPtName=vector[1]
+            nameAlias=vector[3].replace('\n','')
+            riboPtNames.append(riboPtName)
+            nameAliases[riboPtName]=nameAlias
             
-    return riboPtNames
+    return riboPtNames,nameAliases
 
 ###
 ### MAIN
@@ -261,27 +271,10 @@ timePointLabels=['TP1','TP2','TP3','TP4']
 theDotSize=3
 conditions=['rbf','lysate']
 
-nameAliases={}
-nameAliases['VNG0551G']='L44E'
-nameAliases['VNG1158G']='S28E'
-nameAliases['VNG2469G']='L39E'
-nameAliases['VNG0433C']='S10-like'
-nameAliases['VNG1132G']='S13'
-nameAliases['VNG1159G']='L24E'
-
-nameAliases['VNG1705G']='L5'
-nameAliases['VNG1695G']='L22'
-nameAliases['VNG1703G']='S4E'
-nameAliases['VNG1697G']='S3'
-nameAliases['VNG2048G']='S24E'
-nameAliases['VNG1134G']='S11'
-nameAliases['VNG1157G']='L7AE'
-nameAliases['VNG2047G']='S27AE'
-
 # 1. read data
 print('reading data...')
 data,geneNames,conditions,replicates,timepoints=dataReader()
-riboPtNames=riboPtNamesReader()
+riboPtNames,nameAliases=riboPtNamesReader()
 
 # 2. analyse data
 print('analyzing data...')

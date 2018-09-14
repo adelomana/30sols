@@ -4,6 +4,7 @@
 ### (PLOT2) a plot with the model from the slopes.
 ### (PLOT3) a colored plot with differential expression (red/blue).
 ### (PLOT4) a control for length of transcript and translational efficiency.
+### (PLOT5) a control for transcript half-life
 ### 
 
 import sys,math,pandas,seaborn
@@ -360,6 +361,8 @@ totalSetx=[]; totalSety=[]; totalHollowx=[]; totalHollowy=[]; regressions=[]
 lengthControl=[]; lengthControlHollow=[]; lengthControlRegressions=[]
 degControl=[]; degControlHollow=[]; degControlRegressions=[]
 
+degExpControl=[]; degExpRegressions=[]
+
 highestExpression=0
 
 for timepoint in timepoints:
@@ -373,6 +376,7 @@ for timepoint in timepoints:
     expSet={}
     distSets={} # to be constructed in transcriptSetsDistributionAnalyzer
     degx=[]; degy=[]
+    degExpx=[]; degExpy=[]
     
     for geneName in geneNames:
         
@@ -413,6 +417,9 @@ for timepoint in timepoints:
                 lengthControlHollow.append([transcriptLengths[geneName],r])
                 try:
                     degControlHollow.append([halfLifes[geneName],r])
+                    degExpControl.append([halfLifes[geneName],m])
+                    if halfLifes[geneName] < 25:
+                        degExpx.append(m); degExpy.append(halfLifes[geneName])
                 except:
                     pass
                 
@@ -430,6 +437,9 @@ for timepoint in timepoints:
                 try:
                     degControl.append([halfLifes[geneName],r])
                     degx.append(halfLifes[geneName]); degy.append(r)
+                    degExpControl.append([halfLifes[geneName],m])
+                    if halfLifes[geneName] < 25:
+                        degExpx.append(m); degExpy.append(halfLifes[geneName])
                 except:
                     pass
                 
@@ -464,6 +474,14 @@ for timepoint in timepoints:
     print('\t\t pvalue',p_valueHL)
     print('\t\t std_err',std_errHL)
 
+    print('\t regression for half-life / expression...')
+    slopeHE,interceptHE,r_valueHE,p_valueHE,std_errHE=scipy.stats.linregress(degExpx,degExpy)
+    print('\t\t slope',slopeHE)
+    print('\t\t intercept',interceptHE)
+    print('\t\t r_value',r_valueHE)
+    print('\t\t pvalue',p_valueHE)
+    print('\t\t std_err',std_errHE)
+
     # compute for the model
     m=slope
     c=intercept
@@ -475,6 +493,9 @@ for timepoint in timepoints:
 
     # degradation model
     degControlRegressions.append([slopeHL,interceptHL])
+
+    # degradation expression model
+    degExpRegressions.append([slopeHE,interceptHE])
 
     # computed from Matt Wall on log2
     ### satx=2**(numpy.array(setx))-1
@@ -624,7 +645,34 @@ matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.savefig('figures/TE.half-life.control.pdf')
 matplotlib.pyplot.clf()
 
-# 4.2. histogram of half-lifes
+# 4.2. half-life/expression relationship
+time=[]; exp=[]
+low=10000; high=0
+
+for element in degExpControl:
+    if element[0] < 25:
+        time.append(element[0])
+        exp.append(element[1])
+matplotlib.pyplot.plot(exp,time,'o',alpha=0.0333,mew=0,color='black')
+
+if min(exp) < low:
+    low=min(exp)
+if max(exp) > high:
+    high=max(exp)
+
+for i in range(len(degExpRegressions)):
+    m=degExpRegressions[i][0]; c=degExpRegressions[i][1]
+    floor=numpy.arange(low,high+0.1,0.1)
+    e=list(m*numpy.array(floor)+c)
+    #matplotlib.pyplot.plot(floor,e,'-',lw=2,color=theColor[timepoints[i]])
+
+matplotlib.pyplot.ylabel('half-life (min)')
+matplotlib.pyplot.xlabel('log$_{10}$ TPM')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+    
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig('figures/exp.half-life.control.pdf')
+matplotlib.pyplot.clf()
 
 # 5. final message
 print('... all done. Bless!')
