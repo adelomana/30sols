@@ -45,6 +45,7 @@ def upstreamSelector():
         allTails.sort()
         curb=allTails[-1]
         limits=[curb,geneHead]
+        ###limits=[geneHead-100,geneHead]
                 
     elif geneStrand == '-': # what is the first 3' head?
         allHeads=[]
@@ -55,6 +56,7 @@ def upstreamSelector():
         allHeads.sort()
         curb=allHeads[0]
         limits=[geneTail,curb]
+        ###limits=[geneTail,geneTail+100]
 
     else:
         print('error when selecting strand')
@@ -62,11 +64,14 @@ def upstreamSelector():
                     
     # f.2. cut the right sequence
     room=limits[1]-limits[0]
+
+    print(limits,room)
+    
     fullUpstream=genomeSequence[limits[0]-1:limits[1]-1]
 
     # f.3. trim sequence
     if geneStrand == '+':
-        if len(fullUpstream) < upstreamSearch:
+        if len(fullUpstream) <= upstreamSearch:
             trimmed=fullUpstream
         elif len(fullUpstream) > upstreamSearch:
             trimmed=fullUpstream[len(fullUpstream)-upstreamSearch:]
@@ -91,7 +96,7 @@ genomeFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC00260
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
 
-upstreamSearch=250
+upstreamSearch=100
 
 # 1. read data
 
@@ -159,6 +164,8 @@ upstreamSections={}
 upstreamSections['groupA']={}
 upstreamSections['groupB']={}
 
+regulatoryReferences={}
+
 # for each gene, find if it belongs to an operon
 for geneSetName in geneSets:
     print(geneSetName)
@@ -188,13 +195,18 @@ for geneSetName in geneSets:
         # obtain the upstream region
         upstreamRegion=upstreamSelector()
 
-        # trim region and append to dictionary            
-        upstreamSections[geneSetName][referenceGene]=upstreamRegion
+        # trim region and append to dictionary
+        if referenceGene not in upstreamSections[geneSetName]:
+            upstreamSections[geneSetName][referenceGene]=[upstreamRegion,[geneName]]
+        else:
+            upstreamSections[geneSetName][referenceGene][1].append(geneName)
         
 for geneSetName in upstreamSections:
-    for geneName in upstreamSections[geneSetName]:
-        print('>{}.{}.{}'.format(geneName,geneSetName,geneCoordinates[geneName][2]))
-        print(upstreamSections[geneSetName][geneName])
+    for reference in upstreamSections[geneSetName]:
+        
+        print('>{}.{}.{}.{}'.format(geneSetName,reference,'-'.join(upstreamSections[geneSetName][reference][1]),geneCoordinates[reference][2]))
+        print(upstreamSections[geneSetName][reference][0])
+
     print()
         
 

@@ -7,3 +7,5 @@ extra/proteomics/stoichiometry/messages.stoi.txt
 *.txt
 extra/pipeline.kallisto.sleuth/.Rhistory
 extra/F4.tlr/reciprocal/blast_rbh.py
+*.eps
+extra/F2.transcriptional.regulation/panel.c/wd/meme.html
