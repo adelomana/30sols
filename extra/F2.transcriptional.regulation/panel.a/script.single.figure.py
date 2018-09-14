@@ -132,6 +132,10 @@ for timepoint in timepoints:
         x.append(averageRNA)
         y.append(averageRibo)
 
+    print(timepoint,numpy.median(x))
+    print(timepoint,numpy.median(y),(2**(numpy.median(y)))-1)
+    print()
+
     # add to all time points variable
     for element in x:
         allx.append(element)
