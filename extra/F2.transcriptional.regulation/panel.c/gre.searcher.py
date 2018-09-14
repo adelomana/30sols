@@ -64,7 +64,22 @@ def upstreamSelector():
     room=limits[1]-limits[0]
     fullUpstream=genomeSequence[limits[0]-1:limits[1]-1]
 
-    return fullUpstream
+    # f.3. trim sequence
+    if geneStrand == '+':
+        if len(fullUpstream) < upstreamSearch:
+            trimmed=fullUpstream
+        elif len(fullUpstream) > upstreamSearch:
+            trimmed=fullUpstream[len(fullUpstream)-upstreamSearch:]
+        else:
+            print('really unlucky')
+            sys.exit()
+    elif geneStrand == '-':
+        trimmed=fullUpstream[:upstreamSearch]
+    else:
+        print('error when selecting strand while trimming sequence')
+        sys.exit()
+
+    return trimmed
 
 ### MAIN
 
@@ -75,6 +90,8 @@ groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.g
 genomeFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.fasta'
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
+
+upstreamSearch=250
 
 # 1. read data
 
@@ -139,8 +156,8 @@ with open(riboOperonsFile,'r') as f:
 
 # 2. define the upstream regulatory sequence for each gene, independently of being inside an operon
 upstreamSections={}
-upstreamSections['groupA']=[]
-upstreamSections['groupB']=[]
+upstreamSections['groupA']={}
+upstreamSections['groupB']={}
 
 # for each gene, find if it belongs to an operon
 for geneSetName in geneSets:
@@ -170,7 +187,15 @@ for geneSetName in geneSets:
 
         # obtain the upstream region
         upstreamRegion=upstreamSelector()
-        print('>{}'.format(geneName))
-        print(upstreamRegion)
-                  
+
+        # trim region and append to dictionary            
+        upstreamSections[geneSetName][referenceGene]=upstreamRegion
+        
+for geneSetName in upstreamSections:
+    for geneName in upstreamSections[geneSetName]:
+        print('>{}.{}.{}'.format(geneName,geneSetName,geneCoordinates[geneName][2]))
+        print(upstreamSections[geneSetName][geneName])
+    print()
+        
+
 # 4. detect GREs using MEME
