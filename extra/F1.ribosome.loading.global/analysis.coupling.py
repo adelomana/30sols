@@ -110,7 +110,8 @@ def NCsynonymsReader():
 
                 # append final length
                 if firstLine == False:
-                    transcriptLengths[rsName]=numpy.log10(transcriptLength)
+                    #transcriptLengths[rsName]=numpy.log10(transcriptLength)
+                    transcriptLengths[rsName]=transcriptLength
 
                 # obtain synonyms
                 vector=line.split(' ')
@@ -128,7 +129,8 @@ def NCsynonymsReader():
                 v=list(line)
 
                 transcriptLength=transcriptLength+len(v)-1
-        transcriptLengths[rsName]=numpy.log10(transcriptLength)
+        #transcriptLengths[rsName]=numpy.log10(transcriptLength)
+        transcriptLengths[rsName]=transcriptLength
 
     return NCsynonyms,transcriptLengths
 
@@ -579,27 +581,43 @@ print('working with TE controls...')
 # 4.1. TE and transcript length control
 print('\t working on TE and transcript length...')
 
-x=controlLength['withoutFootprint'][0]
-y=controlLength['withoutFootprint'][1]
-matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
-
 x=controlLength['withFootprint'][0]
 y=controlLength['withFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
 
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
-print('\t\t slope',slope)
-print('\t\t intercept',intercept)
-print('\t\t r_value',r_value)
-print('\t\t pvalue',p_value)
-print('\t\t std_err',std_err) 
+print('\t\t with footprints...')
+print('\t\t\t slope',slope)
+print('\t\t\t intercept',intercept)
+print('\t\t\t r_value',r_value)
+print('\t\t\t pvalue',p_value)
+print('\t\t\t std_err',std_err) 
 m=slope
 c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='black')
 
-matplotlib.pyplot.xlabel('transcript length (log$_{10}$ bp)')
+# without
+
+x=controlLength['withoutFootprint'][0]
+y=controlLength['withoutFootprint'][1]
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
+
+slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
+print('\t\t without footprints...')
+print('\t\t\t slope',slope)
+print('\t\t\t intercept',intercept)
+print('\t\t\t r_value',r_value)
+print('\t\t\t pvalue',p_value)
+print('\t\t\t std_err',std_err) 
+m=slope
+c=intercept
+sequence=numpy.arange(min(x),max(x)+0.1,0.1)
+expected=list(m*numpy.array(sequence)+c)
+matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='tan')
+
+matplotlib.pyplot.xlabel('transcript length (bp)')
 matplotlib.pyplot.ylabel('log$_{2}$ TE')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
     
@@ -609,25 +627,42 @@ matplotlib.pyplot.clf()
 
 # 4.2. TE and half-life control
 print('\t working on TE and half-life...')
-x=controlHalfLife['withoutFootprint'][0]
-y=controlHalfLife['withoutFootprint'][1]
-matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
 
 x=controlHalfLife['withFootprint'][0]
 y=controlHalfLife['withFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
 
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
-print('\t\t slope',slope)
-print('\t\t intercept',intercept)
-print('\t\t r_value',r_value)
-print('\t\t pvalue',p_value)
-print('\t\t std_err',std_err) 
+print('\t\t with footprints...')
+print('\t\t\t slope',slope)
+print('\t\t\t intercept',intercept)
+print('\t\t\t r_value',r_value)
+print('\t\t\t pvalue',p_value)
+print('\t\t\t std_err',std_err) 
 m=slope
 c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='black')
+
+# without
+
+x=controlHalfLife['withoutFootprint'][0]
+y=controlHalfLife['withoutFootprint'][1]
+matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
+
+slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
+print('\t\t without footprints...')
+print('\t\t\t slope',slope)
+print('\t\t\t intercept',intercept)
+print('\t\t\t r_value',r_value)
+print('\t\t\t pvalue',p_value)
+print('\t\t\t std_err',std_err) 
+m=slope
+c=intercept
+sequence=numpy.arange(min(x),max(x)+0.1,0.1)
+expected=list(m*numpy.array(sequence)+c)
+matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='tan')
 
 matplotlib.pyplot.xlabel('half life (min)')
 matplotlib.pyplot.ylabel('log$_{2}$ TE')
