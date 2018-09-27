@@ -487,8 +487,9 @@ for timepoint in timepoints:
     expected=list(m*numpy.array(setx)+c)
 
     # predicted value
-    predictedRatio=m*numpy.array(4)+c
-    predictedValue=(2**predictedRatio)*10000
+    expression2Predict=100
+    predictedRatio=m*numpy.array(numpy.log10(expression2Predict))+c
+    predictedValue=(2**predictedRatio)*expression2Predict
     print('\t\t predicted value:',predictedValue)
 
     # computed model

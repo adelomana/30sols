@@ -6,12 +6,12 @@ library('DESeq2')
 library('stringr')
 
 # 0. user defined variables
-tag='trna' # trna / rbf
+tag='rbf' # trna / rbf
 earlyTimepointName='tp.1'
 lateTimepointName='tp.4'
 comparison='condition_tp.4_vs_tp.1'
 
-setwd("~/github/aukera/extra/expression/pipeline.star.htseq-count.deseq2")
+setwd("~/scratch/")
 countsDir="/Volumes/omics4tb/alomana/projects/TLR/data/counts"
 
 DESeqResultsFile=paste("/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/significance",tag,comparison,"csv",sep='.')
@@ -51,11 +51,12 @@ plotMA(res)
 plotMA(resLFC)
 
 plotCounts(dds, gene=which.min(res$padj),intgroup="condition")
+plotCounts(dds, gene=which.max(res$padj),intgroup="condition")
 
 # 6. saving CSV files
 resOrdered=res[order(res$pvalue),]
 write.csv(as.data.frame(resOrdered),file=DESeqResultsFile)
 
 # 7. exporting normalized counts
-values=counts(dds,normalized=TRUE)
-write.csv(as.data.frame(values),file=DESeqNormalizedCountsFile)
+#values=counts(dds,normalized=TRUE)
+#write.csv(as.data.frame(values),file=DESeqNormalizedCountsFile)
