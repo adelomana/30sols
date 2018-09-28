@@ -47,81 +47,10 @@ def colorAssigner(geneName,fcx,fcy):
 
     return theColor
 
-def expressionReaderHD():
-
-    """
-    idem as expressionReaderKS but reading data from STAR/htseq-count/DESeq2 pipeline
-    """
-
-    expression={}
-    
-    sampleTypes=[]
-    geneNames=[]
-    timepoints=[]
-    replicates=[]
-
-    sampleTypes=['trna','rbf']
-
-    for sampleType in sampleTypes:
-        dataFile=dataDirHD+'normalizedCounts.{}.csv'.format(sampleType)
-
-        with open(dataFile,'r') as f:
-
-            firstLine=f.readline()
-            header=firstLine.split(',')
-            sampleNames=header[1:]
-            sampleNames[-1]=(sampleNames[-1].replace('\n','')).replace('"','')
-            sampleNames=[element.replace('"','') for element in sampleNames]
-
-            for line in f:
-                vector=line.split(',')
-
-                # geneName
-                geneName=(vector[0].replace('_','')).replace('"','')
-                if geneName not in geneNames:
-                    geneNames.append(geneName)
-                    
-                for i in range(len(sampleNames)):
-
-                    # sampleType
-                    if sampleType not in sampleTypes:
-                        sampleTypes.append(sampleType)
-
-                    # timepoint
-                    timepoint='timepoint.{}'.format(int(sampleNames[i].split('.')[-2]))
-                    if timepoint not in timepoints:
-                        timepoints.append(timepoint)
-
-                    # replicate
-                    replicate='replicate.{}'.format(int(sampleNames[i].split('rep.')[1][0]))
-                    if replicate not in replicates:
-                        replicates.append(replicate)
-
-                    # value
-                    value=float(vector[i+1])
-
-                    # make sure keys exist
-                    if sampleType not in expression.keys():
-                        expression[sampleType]={}
-                    if geneName not in expression[sampleType].keys():
-                        expression[sampleType][geneName]={}
-                    if timepoint not in expression[sampleType][geneName].keys():
-                        expression[sampleType][geneName][timepoint]={}
-
-                    expression[sampleType][geneName][timepoint][replicate]=value
-
-    # sort variables
-    sampleTypes.sort()
-    geneNames.sort()
-    timepoints.sort()
-    replicates.sort()
-
-    return expression,sampleTypes,geneNames,timepoints,replicates
-
 def grapher(flag):
 
     '''
-    this function builds the figures for all or ribosomal protein genes
+    This function builds the figures for all or ribosomal protein genes
     '''
 
     # defining groups: 0, non-significant; 1, RBF significant; 2, RNA significant; 3, RBF and RNA significants
@@ -279,10 +208,10 @@ def riboPtNamesReader():
 def significanceReaderHD():
 
     '''
-    this function retrieves the significance defined by DESeq2
+    This function retrieves the significance defined by DESeq2
     '''
 
-    significantRBFs=[]; significantRNAs=[]
+    positions={}
 
     sampleTypes=['trna','rbf']
 
@@ -311,44 +240,19 @@ def significanceReaderHD():
 
     return significantRBFs,significantRNAs
 
-def synonymReader():
-
-    synonyms={}
-    with open(transcriptomeFastaFile,'r') as f:
-        for line in f:
-            if line[0] == '>':
-
-                id=line.split('>')[1].split(' ')[0]
-                if 'locus_tag' in line:
-                    name=line.split('[locus_tag=')[1].split(' ')[0].replace(']','')
-                elif 'gene' in line:
-                    name=line.split('[gene=')[1].split(' ')[0].replace(']','')
-                else:
-                    print('error while parsing transcriptome fasta file...')
-                    sys.exit()
-
-                synonyms[id]=name
-
-    return synonyms
-
+###
 ### MAIN
+###
 
-# 1. read general data
-print('reading data...')
-transcriptomeFastaFile='/Volumes/omics4tb/alomana/projects/TLR/data/transcriptome/hsa.ASM680v1.fasta'
-ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
-synonyms=synonymReader()
-riboPtNames=riboPtNamesReader()
-
-# 3. process data for STAR/htseq-count/DESeq2
+# 1. process data for STAR/htseq-count/DESeq2
 print('')
 print('processing STAR/htseq-count/DESeq2...')
 
 flag='hd'
 dataDirHD='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 
-expression,sampleTypes,geneNames,timepoints,replicates=expressionReaderHD()
-significantRBFs,significantRNAs=significanceReaderHD()
+positions=significanceReaderHD()
+
 print('genes retrieved {}'.format(len(geneNames)))
 print('number of significant transcripts {}'.format(len(significantRNAs)))
 print('number of significant footprints {}'.format(len(significantRBFs)))
