@@ -262,11 +262,21 @@ def synonymsReader():
     '''
 
     synonyms={}
+    definedGenes=[]
+    
     with open(gff3File,'r') as f:
         for line in f:
             vector=line.split('\t')
             if vector[0][0] != '#':
                 info=vector[-1].replace('\n','')
+
+
+                if len(vector) > 2:
+                    if vector[2] == 'gene':
+                        print(info)
+                        geneID=info.split('ID=')[1].split(';')[0]
+                        definedGenes.append(geneID)
+                
                 if 'old_locus_tag=' in info:
                     old=info.split('old_locus_tag=')[1].split(';')[0]
                     new=info.split('ID=')[1].split(';')[0].replace('_','')
@@ -278,7 +288,17 @@ def synonymsReader():
                     else:
                         synonyms[new]=old
 
-    print(synonyms)
+    
+
+    definedGenes.sort()
+
+    print(definedGenes)
+    
+    print(len(definedGenes))
+    print(len(synonyms))
+
+    sys.exit()
+    
 
     return synonyms
 
