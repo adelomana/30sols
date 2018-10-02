@@ -1,4 +1,4 @@
-# Get  topGO data Object  [6]    
+# Get  topGO data Object
 get_topGO_object <- function(genes,gene2go,ontology=c("BP","MF","CC")) {
   require(topGO)
   cat("Getting topGO object","\n")
