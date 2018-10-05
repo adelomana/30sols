@@ -96,7 +96,7 @@ def grapher(changes,flag):
 
     # selecting probing genes
     probingGenes=[]
-    forbiddenGenes=['gene-VNGRS06350']
+    forbiddenGenes=['gene-VNGRS06350'] # new tRNA gene that does not have old annotation VNGt***
     
     for geneName in changes:
         
@@ -132,24 +132,31 @@ def grapher(changes,flag):
         except:
             pass
 
+        # associate to a protein function
+        proteinFunction='-'
+        try:
+            proteinFunction=proteinFunctions[geneName]
+        except:
+            pass
+
         # filling files
         if theColor == 'yellow':
-            yellowFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            yellowFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'blue':
-            blueFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            blueFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'red':
-            redFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            redFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'orange':
-            orangeFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            orangeFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'green':
-            greenFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            greenFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'black':
             if fcx > 1:
-                blackPlusFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+                blackPlusFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
             else:
-                blackMinusFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+                blackMinusFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         elif theColor == 'dubious':
-            dubiousFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(oldName,geneName,theColor,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
+            dubiousFile.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(theColor,oldName,geneName,proteinFunction,fcx,fcy,changes[geneName][0][1],changes[geneName][1][1]))
         else:
             print('color not recognized')
             sys.exit()
@@ -263,17 +270,16 @@ def synonymsReader():
 
     synonyms={}
     definedGenes=[]
-    
+    proteinFunctions={}
+
     with open(gff3File,'r') as f:
         for line in f:
             vector=line.split('\t')
             if vector[0][0] != '#':
                 info=vector[-1].replace('\n','')
 
-
                 if len(vector) > 2:
                     if vector[2] == 'gene':
-                        print(info)
                         geneID=info.split('ID=')[1].split(';')[0]
                         definedGenes.append(geneID)
                 
@@ -288,19 +294,16 @@ def synonymsReader():
                     else:
                         synonyms[new]=old
 
-    
+                # obtaining info about protein names
+                if len(vector) > 2:
+                    if vector[1] == 'Protein Homology':
+                        geneID=info.split('Parent=')[1].split(';')[0].replace('_','')
+                        proteinFunction=info.split('product=')[1].split(';')[0]
+                        proteinFunctions[geneID]=proteinFunction
 
     definedGenes.sort()
 
-    print(definedGenes)
-    
-    print(len(definedGenes))
-    print(len(synonyms))
-
-    sys.exit()
-    
-
-    return synonyms
+    return synonyms,proteinFunctions
 
 ###
 ### MAIN
@@ -313,7 +316,7 @@ dataDirHD='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 
 # 1. obtain synonym
 print('reading annotation file...')
-synonyms=synonymsReader()
+synonyms,proteinFunctions=synonymsReader()
 
 # 2. process data for STAR/htseq-count/DESeq2
 print('reading RNA-seq and Ribo-seq info...')
