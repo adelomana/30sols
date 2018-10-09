@@ -16,68 +16,28 @@ def expressionReader():
 
     '''
     this function creates a dictionary for expression values as
-    expression[trna/rbf][ribo-pt gene name][timepoint][replicate]=value
+    expression[trna/rbf][ribo-pt gene name]=foldchange
     '''
 
     expression={}
-    
-    sampleTypes=[]
-    geneNames=[]
-    timepoints=[]
-    replicates=[]
+    sampleTypes=['trna','rbf']
 
-    with open(expressionDataFile,'r') as f:
+    for sampleType in sampleTypes:
+        expressionDataFile=expressionDataDir+'significance.{}.condition_tp.4_vs_tp.1.csv'.format(sampleType)
+        expression[sampleType]={}
 
-        firstLine=f.readline()
-        header=firstLine.split(',')
-        sampleNames=header[1:]
-        sampleNames[-1]=sampleNames[-1].replace('\n','')
+        with open(expressionDataFile,'r') as f:
+            next(f)
+            for line in f:
+                vector=line.split(',')
+                
+                geneName=vector[0].replace('"','')
+                log2FC=float(vector[2])
 
-        for line in f:
-            vector=line.split(',')
+                if geneName in riboPtNames:
+                    expression[sampleType][geneName]=log2FC
 
-            # geneName
-            geneName=vector[0]
-            if geneName not in geneNames:
-                geneNames.append(geneName)
-
-            for i in range(len(sampleNames)):
-
-                # sampleType
-                sampleType=sampleNames[i].split('.')[0]
-                if sampleType not in sampleTypes:
-                    sampleTypes.append(sampleType)
-
-                # timepoint
-                timepoint='tp.{}'.format(int(sampleNames[i].split('.')[-1]))
-                if timepoint not in timepoints:
-                    timepoints.append(timepoint)
-
-                # replicate
-                replicate='rep.{}'.format(int(sampleNames[i].split('rep.')[1][0]))
-                if replicate not in replicates:
-                    replicates.append(replicate)
-
-                # value
-                value=float(vector[i+1])
-
-                # make sure keys exist
-                if sampleType not in expression.keys():
-                    expression[sampleType]={}
-                if geneName not in expression[sampleType].keys():
-                    expression[sampleType][geneName]={}
-                if timepoint not in expression[sampleType][geneName].keys():
-                    expression[sampleType][geneName][timepoint]={}
-
-                expression[sampleType][geneName][timepoint][replicate]=value
-
-    # sort variables
-    sampleTypes.sort()
-    geneNames.sort()
-    timepoints.sort()
-    replicates.sort()
-
-    return expression,sampleTypes,geneNames,timepoints,replicates
+    return expression
 
 def regressionAnalysis(x,y):
 
@@ -139,13 +99,13 @@ def riboPtNamesReader():
 ### MAIN
 
 # 0. user defined variables
-expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
+expressionDataDir='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 
 # 1. read data
 print('reading data...')
 riboPtNames=riboPtNamesReader()
-expression,sampleTypes,geneNames,timepoints,replicates=expressionReader()
+expression=expressionReader()
 
 # 2. compute and plot regression and prediction intervals
 print('computing prediction intervals...')
@@ -153,24 +113,14 @@ print('computing prediction intervals...')
 # 2.1. defining x and y data points
 fcx=[]; fcy=[]
 ribox=[]; riboy=[]
-orderedRiboNames=[]
 
-timepointLate=timepoints[-1]
-timepointEarly=timepoints[0]
-
-for geneName in geneNames:
+for geneName in riboPtNames:
         
-        # compute averages for RNA-seq late
-        x=numpy.mean([expression['trna'][geneName][timepointLate][replicate] for replicate in replicates])
-
-        # compute averages for RNA-seq early
-        y=numpy.mean([expression['trna'][geneName][timepointEarly][replicate] for replicate in replicates])
         
-        # compute averages for Ribo-seq late
-        z=numpy.mean([expression['rbf'][geneName][timepointLate][replicate] for replicate in replicates])
+        #w=numpy.mean([expression['rbf'][geneName][timepointEarly][replicate] for replicate in replicates])
 
-        # compute averages for Ribo-seq early
-        w=numpy.mean([expression['rbf'][geneName][timepointEarly][replicate] for replicate in replicates])
+        working line
+
         
         # compute fold-changes
         fcx.append(x-y)
