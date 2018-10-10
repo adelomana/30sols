@@ -19,61 +19,62 @@ def expressionReader():
 
     expression={}
     
-    sampleTypes=[]
     geneNames=[]
     timepoints=[]
     replicates=[]
 
-    with open(expressionDataFile,'r') as f:
+    for sampleType in sampleTypes:
+        expressionDataFile=expressionDataDir+'normalizedCounts.{}.csv'.format(sampleType)
 
-        firstLine=f.readline()
-        header=firstLine.split(',')
-        sampleNames=header[1:]
-        sampleNames[-1]=sampleNames[-1].replace('\n','')
+        with open(expressionDataFile,'r') as f:
 
-        for line in f:
-            vector=line.split(',')
+            firstLine=f.readline()
+            header=firstLine.split(',')
+            sampleNames=header[1:]
+            sampleNames[-1]=sampleNames[-1].replace('\n','')
 
-            # geneName
-            geneName=vector[0]
-            if geneName in riboPtNames:
+            for line in f:
+                vector=line.split(',')
 
-                for i in range(len(sampleNames)):
+                # geneName
+                geneName=vector[0]
+                if geneName in riboPtNames:
 
-                    # sampleType
-                    sampleType=sampleNames[i].split('.')[0]
-                    if sampleType not in sampleTypes:
-                        sampleTypes.append(sampleType)
+                    # gene Names
+                    if geneName not in geneNames:
+                        geneNames.append(geneName)
 
-                    # timepoint
-                    timepoint='tp.{}'.format(int(sampleNames[i].split('.')[-1]))
-                    if timepoint not in timepoints:
-                        timepoints.append(timepoint)
+                    for i in range(len(vector)-1):
+                    
+                        # timepoint
+                        timepoint='tp.{}'.format(int(sampleNames[i].split('.')[-1]))
+                        if timepoint not in timepoints:
+                            timepoints.append(timepoint)
 
-                    # replicate
-                    replicate='rep.{}'.format(int(sampleNames[i].split('rep.')[1][0]))
-                    if replicate not in replicates:
-                        replicates.append(replicate)
+                        # replicate
+                        replicate='rep.{}'.format(int(sampleNames[i].split('rep.')[1][0]))
+                        if replicate not in replicates:
+                            replicates.append(replicate)
 
-                    # value
-                    value=float(vector[i+1])
+                        # value
+                        value=float(vector[i+1])
 
-                    # make sure keys exist
-                    if sampleType not in expression.keys():
-                        expression[sampleType]={}
-                    if geneName not in expression[sampleType].keys():
-                        expression[sampleType][geneName]={}
-                    if timepoint not in expression[sampleType][geneName].keys():
-                        expression[sampleType][geneName][timepoint]={}
+                        # make sure keys exist
+                        if sampleType not in expression.keys():
+                            expression[sampleType]={}
+                        if geneName not in expression[sampleType].keys():
+                            expression[sampleType][geneName]={}
+                        if timepoint not in expression[sampleType][geneName].keys():
+                            expression[sampleType][geneName][timepoint]={}
 
-                    expression[sampleType][geneName][timepoint][replicate]=value
+                        expression[sampleType][geneName][timepoint][replicate]=value
 
     # sort variables
     sampleTypes.sort()
     geneNames.sort()
     timepoints.sort()
     replicates.sort()
-    
+
     return expression,sampleTypes,timepoints,replicates
 
 def riboPtNamesReader():
@@ -96,10 +97,11 @@ def riboPtNamesReader():
 ###
 
 # 0. user defined variables
-expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/normalizedCounts.all.csv'
+expressionDataDir='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 scratchDir='/Volumes/omics4tb/alomana/scratch/'
 theColors=['red','orange','green','blue']
+sampleTypes=['trna','rbf']
 
 # 1. read data
 riboPtNames=riboPtNamesReader()
@@ -132,10 +134,6 @@ for timepoint in timepoints:
         x.append(averageRNA)
         y.append(averageRibo)
 
-    print(timepoint,numpy.median(x))
-    print(timepoint,numpy.median(y),(2**(numpy.median(y)))-1)
-    print()
-
     # add to all time points variable
     for element in x:
         allx.append(element)
@@ -165,13 +163,15 @@ idx=numpy.where(newy>0)
 matplotlib.pyplot.plot(newx[idx],newy[idx],lw=4,color='black')
 
 description='R$^2$={:.2f}\np={:.2e}\na={:.2f}'.format(r_value**2,p_value,slope)
-matplotlib.pyplot.text(11.5,6,description)
+matplotlib.pyplot.text(7,9,description)
 
 matplotlib.pyplot.xlabel('RNA-seq, log$_2$(normalized counts)')
 matplotlib.pyplot.ylabel('Ribo-seq, log$_2$(normalized counts)')
 
-matplotlib.pyplot.xlim([3,15.5])
-matplotlib.pyplot.ylim([5,15.5])
+matplotlib.pyplot.yticks([4,6,8,10])
+
+#matplotlib.pyplot.xlim([1,18])
+#matplotlib.pyplot.ylim([1,18])
 
 matplotlib.pyplot.legend(markerscale=1.5)
         

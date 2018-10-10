@@ -20,7 +20,6 @@ def expressionReader():
     '''
 
     expression={}
-    sampleTypes=['trna','rbf']
 
     for sampleType in sampleTypes:
         expressionDataFile=expressionDataDir+'significance.{}.condition_tp.4_vs_tp.1.csv'.format(sampleType)
@@ -93,6 +92,8 @@ def riboPtNamesReader():
         for line in f:
             vector=line.split('\t')
             riboPtNames.append(vector[0])
+
+    riboPtNames.sort()
             
     return riboPtNames
 
@@ -101,6 +102,7 @@ def riboPtNamesReader():
 # 0. user defined variables
 expressionDataDir='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
+sampleTypes=['trna','rbf']
 
 # 1. read data
 print('reading data...')
@@ -111,26 +113,18 @@ expression=expressionReader()
 print('computing prediction intervals...')
 
 # 2.1. defining x and y data points
-fcx=[]; fcy=[]
 ribox=[]; riboy=[]
-
 for geneName in riboPtNames:
-        
-        
-        #w=numpy.mean([expression['rbf'][geneName][timepointEarly][replicate] for replicate in replicates])
 
-        working line
-
-        
         # compute fold-changes
-        fcx.append(x-y)
-        fcy.append(z-w)
-
-        # add ribo-pt genes
-        if geneName in riboPtNames:
-            ribox.append(x-y)
-            riboy.append(z-w)
-            orderedRiboNames.append(geneName)
+        ribox.append(expression['trna'][geneName])
+        riboy.append(expression['rbf'][geneName])
+        
+# check
+if len(ribox) != len(riboPtNames):
+    print(len(ribox),len(riboPtNames))
+    print('Mismatch. Exiting...')
+    sys.exit()
 
 # 2.2. compute regression line and intervals
 regressionLine,CI,PI=regressionAnalysis(numpy.array(ribox),numpy.array(riboy))
@@ -141,7 +135,7 @@ matplotlib.pyplot.fill_between(regressionLine[0],CI[1],CI[0],color='black',alpha
 matplotlib.pyplot.fill_between(regressionLine[0],PI[1],PI[0],color='black',alpha=0.1,lw=0)
 
 # 3. define colors of scatter plot ribo-pt genes based on prediction intervals
-for i in range(len(ribox)):
+for i in range(len(riboPtNames)):
 
     # find the regression point closer to ribox[i] and define the approximate limit from PI
     distances=[abs(position-ribox[i]) for position in regressionLine[0]]
@@ -152,28 +146,30 @@ for i in range(len(ribox)):
     # check if values are above or below PI
     if riboy[i] > limitTop:
         theColor='red'; theAlpha=1
-        print('{} detected as upper outlier at x={}; y={}.'.format(orderedRiboNames[i],ribox[i],riboy[i]))
+        print('\t {} detected as upper outlier at x={}; y={}.'.format(riboPtNames[i],ribox[i],riboy[i]))
     elif riboy[i] < limitBottom:
         theColor='blue'; theAlpha=1
-        print('{} detected as bottom outlier at x={}; y={}.'.format(orderedRiboNames[i],ribox[i],riboy[i]))
+        print('\t {} detected as bottom outlier at x={}; y={}.'.format(riboPtNames[i],ribox[i],riboy[i]))
     else:
         theColor='black'; theAlpha=0.1
+        print('black\t{}\t{}\t{}\t{}'.format(riboPtNames[i],ribox[i],riboy[i],abs(riboy[i]-limitBottom)))
+
 
     # plot the point
     matplotlib.pyplot.plot(ribox[i],riboy[i],'o',alpha=theAlpha,mew=0,ms=8,color=theColor)
 
 # 3.1. close figure
-matplotlib.pyplot.xlim([-5,0.5])
-matplotlib.pyplot.ylim([-5,0.5])
+matplotlib.pyplot.xlim([-6.5,0.5])
+matplotlib.pyplot.ylim([-6.5,0.5])
 
 matplotlib.pyplot.grid(alpha=0.25, ls=':')
 
-matplotlib.pyplot.plot([-5,0.5],[0,0],':',color='black',alpha=0.5)
-matplotlib.pyplot.plot([0,0],[-5,0.5],':',color='black',alpha=0.5)
-matplotlib.pyplot.plot([-5,0.5],[-5,0.5],':',color='black',alpha=0.5)
+matplotlib.pyplot.plot([-6,0.5],[-6,0.5],':',color='black',alpha=0.5)
     
 matplotlib.pyplot.xlabel('RNA-seq, log$_2$ FC')
 matplotlib.pyplot.ylabel('Ribo-seq, log$_2$ FC')
+
+matplotlib.pyplot.xticks([-6,-5,-4,-3,-2,-1,0])
 
 figureName='stats.pdf'
 matplotlib.pyplot.tight_layout()

@@ -8,8 +8,8 @@ library('stringr')
 # 0. user defined variables
 tag='rbf' # trna / rbf
 earlyTimepointName='tp.1'
-lateTimepointName='tp.4'
-comparison='condition_tp.4_vs_tp.1'
+lateTimepointName='tp.2'
+comparison='condition_tp.2_vs_tp.1'
 
 setwd("~/scratch/")
 countsDir="/Volumes/omics4tb/alomana/projects/TLR/data/counts"
