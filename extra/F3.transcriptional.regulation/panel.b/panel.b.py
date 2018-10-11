@@ -95,6 +95,8 @@ matplotlib.pyplot.ylabel('Ribo-seq, log$_2$ FC')
 
 #matplotlib.pyplot.legend(markerscale=1.5,framealpha=1)
 
+matplotlib.pyplot.xticks([-6,-5,-4,-3,-2,-1,0])
+
 matplotlib.pyplot.xlim([-6.5,0.5])
 matplotlib.pyplot.ylim([-6.5,0.5])
 
