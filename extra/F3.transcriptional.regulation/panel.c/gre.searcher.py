@@ -158,8 +158,9 @@ for element in allGenes:
             for operon in rbptOperons:
                 if element == rbptOperons[operon][-1]:
                     geneLeaders.append(element)
-print(geneLeaders)
-sys.exit()                    
+
+# 3. plot fold-changes of gene leaders
+           
 # 2. define the upstream regulatory sequence for each gene, independently of being inside an operon
 upstreamSections={}
 upstreamSections['groupA']={}
