@@ -134,6 +134,8 @@ def grapher():
     log2FCrna=[]
     log2FCribo=[]
 
+    f=open('ribo.groupings.txt','w')
+
     for geneName in riboPtNames:
 
         # compute median RNA
@@ -151,6 +153,14 @@ def grapher():
         # compute fold-changes
         log2FCrna.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
         log2FCribo.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
+
+        # saving file with the two different groups
+        if expressionFC['tp.4_vs_tp.1']['trna'][geneName] > -4:
+            f.write('{}\t{}\t{}\n'.format('group A',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName]))
+        else:
+            f.write('{}\t{}\t{}\n'.format('group B',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName]))
+
+    f.close()
 
     # making the figure
     theSize=8

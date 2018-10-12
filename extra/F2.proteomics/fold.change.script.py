@@ -133,6 +133,8 @@ def violinAnalysis():
 
     foldChangesFCL=[]; timeStampsFCL=[]; foldChangesREF=[]; timeStampsREF=[]
     violinStructure={}; violinNames={}
+
+    L14pREF=[]
     
     for fraction in proteinConditions:
         timeStamp=0
@@ -165,6 +167,8 @@ def violinAnalysis():
                             foldChangesFCL.append(value); timeStampsFCL.append(timeStamp)
                         else:
                             foldChangesREF.append(value); timeStampsREF.append(timeStamp)
+                            if name == 'gene-VNG_RS06605':
+                               L14pREF.append([value,timeStamp])
                         if value > 0:
                             print('FC > 0: ',fraction,timepoint,name,value)
                     else:
@@ -194,6 +198,12 @@ def violinAnalysis():
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
     #matplotlib.pyplot.ylim(yLimits)
+
+    print(L14pREF)
+    x=[element[0] for element in L14pREF]
+    print(x)
+    matplotlib.pyplot.plot([0,1,2],x,'-k')
+    #sys.exit()
 
     # final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')

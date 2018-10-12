@@ -91,62 +91,30 @@ def upstreamSelector():
 # 0. user defined variables
 
 # 0.1. paths
-groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/data.txt'
-genomeFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.fasta'
-annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/ribo.groupings.txt'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
-
-upstreamSearch=100
+annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 
 # 1. read data
 
 # 1.1. read info about two groups of transcripts
 geneSets={}
-geneSets['groupA']=[]
-geneSets['groupB']=[]
+geneSets['group A']=[]
+geneSets['group B']=[]
 allGenes=[]
 
 with open(groupingDataFile,'r') as f:
-    next(f)
     for line in f:
         v=line.split('\t')
-        groupTag=v[0].replace(' ','')
-        geneName=v[1].replace(' ', '')
-        geneSets[groupTag].append(geneName)
-        allGenes.append(geneName)
-        
-# 1.2. read genome info
-geneCoordinates={}; allGeneCoordinates={}
-recoveredGenes=[]
-synonyms={}; invertedSynonyms={}
+        if v[0] == 'group A':
+            geneSets[v[0]].append(v[1])
+        else:
+            geneSets[v[0]].append(v[1])
+        allGenes.append(v[1])
 
-with open(annotationFile,'r') as f:
-    next(f)
-    next(f)
-    for line in f:
-        v=line.split('\t')
-        if 'gene' in v:
-            info=v[-1]
-            
-            start=int(v[3])
-            stop=int(v[4])
-            strand=v[6]
-            id=v[8].split('ID=')[1].split(';')[0]
-
-            allGeneCoordinates[id]=[start,stop,strand]
-
-            if 'old_locus_tag=' in info:
-                geneName=info.split('old_locus_tag=')[1].split('%')[0].replace('\n','')
-                geneCoordinates[geneName]=[start,stop,strand]
-
-                synonyms[geneName]=id
-                invertedSynonyms[id]=geneName
-
-# 1.3. read FASTA file
-genomeSequence=fastaFileReader()
-
-# 1.4. read operons
+# 1.2. read operons
 rbptOperons={}
+genesInOperons=[]
 with open(riboOperonsFile,'r') as f:
     next(f)
     for line in f:
@@ -156,9 +124,42 @@ with open(riboOperonsFile,'r') as f:
         
         elements=v[1:]
         for element in elements:
-            geneID=invertedSynonyms[element]
-            rbptOperons[name].append(geneID)
+            rbptOperons[name].append(element)
+            genesInOperons.append(element)
 
+# 1.3. read gene orientations
+geneOrientations={}
+with open(annotationFile,'r') as f:
+    next(f)
+    next(f)
+    for line in f:
+        v=line.split('\t')
+        if 'gene' in v:
+            info=v[-1]
+
+            strand=v[6]
+            id=v[8].split('ID=')[1].split(';')[0]
+            geneOrientations[id]=strand
+
+# 2. trim gene sets to operon heads
+geneLeaders=[] # genes that are either not part of an operon or operon headers
+
+# 2.1. check if gene is in operon
+for element in allGenes:
+    if element not in genesInOperons:
+        geneLeaders.append(element)
+    else:
+        # 2.2. if gene is in an operon, make sure it is at its head
+        if geneOrientations[element] == '+':
+            for operon in rbptOperons:
+                if element == rbptOperons[operon][0]:
+                    geneLeaders.append(element)
+        if geneOrientations[element] == '-':
+            for operon in rbptOperons:
+                if element == rbptOperons[operon][-1]:
+                    geneLeaders.append(element)
+print(geneLeaders)
+sys.exit()                    
 # 2. define the upstream regulatory sequence for each gene, independently of being inside an operon
 upstreamSections={}
 upstreamSections['groupA']={}

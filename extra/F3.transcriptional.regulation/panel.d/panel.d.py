@@ -61,6 +61,8 @@ def regressionAnalysis(x,y):
     y_pred=fitted.predict(x_pred2)
     regressionLine=[x_pred,y_pred]
 
+    print()
+
     # f.3. compute CI
     y_hat=fitted.predict(xc)
     y_err=y-y_hat
@@ -146,14 +148,15 @@ for i in range(len(riboPtNames)):
     # check if values are above or below PI
     if riboy[i] > limitTop:
         theColor='red'; theAlpha=1
+        expected=
         print('\t {} detected as upper outlier at x={}; y={}.'.format(riboPtNames[i],ribox[i],riboy[i]))
+        
     elif riboy[i] < limitBottom:
         theColor='blue'; theAlpha=1
         print('\t {} detected as bottom outlier at x={}; y={}.'.format(riboPtNames[i],ribox[i],riboy[i]))
     else:
         theColor='black'; theAlpha=0.1
         print('black\t{}\t{}\t{}\t{}'.format(riboPtNames[i],ribox[i],riboy[i],abs(riboy[i]-limitBottom)))
-
 
     # plot the point
     matplotlib.pyplot.plot(ribox[i],riboy[i],'o',alpha=theAlpha,mew=0,ms=8,color=theColor)
