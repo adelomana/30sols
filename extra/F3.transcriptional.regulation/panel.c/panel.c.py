@@ -134,7 +134,8 @@ def grapher():
     log2FCrna=[]
     log2FCribo=[]
 
-    f=open('ribo.groupings.txt','w')
+    f=open('ribo.groupings.csv','w')
+    f.write('# group,geneName,foldChange,medianExpression\n')
 
     for geneName in riboPtNames:
 
@@ -145,10 +146,10 @@ def grapher():
         medianRNA.append(z)
 
         # compute median Ribo
-        x=numpy.mean([expressionRC['rbf'][geneName][timepoints[-1]][replicate] for replicate in replicates])
-        y=numpy.mean([expressionRC['rbf'][geneName][timepoints[0]][replicate] for replicate in replicates])
-        z=numpy.median([x,y])
-        medianRibo.append(z)
+        u=numpy.mean([expressionRC['rbf'][geneName][timepoints[-1]][replicate] for replicate in replicates])
+        v=numpy.mean([expressionRC['rbf'][geneName][timepoints[0]][replicate] for replicate in replicates])
+        t=numpy.median([u,v])
+        medianRibo.append(t)
 
         # compute fold-changes
         log2FCrna.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
@@ -156,9 +157,9 @@ def grapher():
 
         # saving file with the two different groups
         if expressionFC['tp.4_vs_tp.1']['trna'][geneName] > -4:
-            f.write('{}\t{}\t{}\n'.format('group A',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName]))
+            f.write('{},{},{},{}\n'.format('group A',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName],z))
         else:
-            f.write('{}\t{}\t{}\n'.format('group B',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName]))
+            f.write('{},{},{},{}\n'.format('group B',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName],z))
 
     f.close()
 

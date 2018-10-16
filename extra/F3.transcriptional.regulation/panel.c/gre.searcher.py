@@ -3,6 +3,7 @@
 ###
 
 import sys
+import matplotlib,matplotlib.pyplot
 
 def fastaFileReader():
 
@@ -91,7 +92,7 @@ def upstreamSelector():
 # 0. user defined variables
 
 # 0.1. paths
-groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/ribo.groupings.txt'
+groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/ribo.groupings.csv'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
 
@@ -101,16 +102,18 @@ annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC0
 geneSets={}
 geneSets['group A']=[]
 geneSets['group B']=[]
-allGenes=[]
+expressionCoordinates={}
 
 with open(groupingDataFile,'r') as f:
+    next(f)
     for line in f:
-        v=line.split('\t')
+        v=line.split(',')
         if v[0] == 'group A':
             geneSets[v[0]].append(v[1])
         else:
             geneSets[v[0]].append(v[1])
-        allGenes.append(v[1])
+
+        expressionCoordinates[v[1]]=[float(v[2]),float(v[3])]
 
 # 1.2. read operons
 rbptOperons={}
@@ -145,7 +148,7 @@ with open(annotationFile,'r') as f:
 geneLeaders=[] # genes that are either not part of an operon or operon headers
 
 # 2.1. check if gene is in operon
-for element in allGenes:
+for element in expressionCoordinates:
     if element not in genesInOperons:
         geneLeaders.append(element)
     else:
@@ -160,6 +163,20 @@ for element in allGenes:
                     geneLeaders.append(element)
 
 # 3. plot fold-changes of gene leaders
+for leader in geneLeaders:
+    x=expressionCoordinates[leader][1]
+    y=expressionCoordinates[leader][0]
+    matplotlib.pyplot.plot(x,y,'ok')
+matplotlib.pyplot.savefig('figure.pdf')
+
+# 4. obtain GRE counts for each gene
+
+# 5. make a PCA plot of proportions
+
+
+
+sys.exit()
+                    
            
 # 2. define the upstream regulatory sequence for each gene, independently of being inside an operon
 upstreamSections={}
