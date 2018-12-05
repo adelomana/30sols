@@ -144,6 +144,18 @@ with open(annotationFile,'r') as f:
             id=v[8].split('ID=')[1].split(';')[0]
             geneOrientations[id]=strand
 
+# 1.4 convert new annotation to old annotation
+annotationMap={}
+with open(annotationFile,'r') as f:
+    next(f)
+    next(f)
+    next(f)
+    for line in f:
+        v=line.split('\t')
+        print(v)
+        sys.exit()
+sys.exit()
+
 # 2. trim gene sets to operon heads
 geneLeaders=[] # genes that are either not part of an operon or operon headers
 
@@ -162,16 +174,31 @@ for element in expressionCoordinates:
                 if element == rbptOperons[operon][-1]:
                     geneLeaders.append(element)
 
+
+print(rbptOperons)
+print()
+print(geneLeaders)
+
 # 3. plot fold-changes of gene leaders
 for leader in geneLeaders:
     x=expressionCoordinates[leader][1]
     y=expressionCoordinates[leader][0]
     matplotlib.pyplot.plot(x,y,'ok')
-matplotlib.pyplot.savefig('figure.pdf')
+
+matplotlib.pyplot.xlabel('median expression')
+matplotlib.pyplot.ylabel('fold-change')
+matplotlib.pyplot.savefig('figure.gene.expression.leaders.pdf')
 
 # 4. obtain GRE counts for each gene
 
-# 5. make a PCA plot of proportions
+# 4.1. convert from new annotation to old annotation
+
+# 4.2. define the region of interest considering the gff3 file provided by Wei-ju
+
+# 4.3. convert each GRE PDF into an integral
+
+
+# 5. make a PCA plot of proportions, or face values of integrals
 
 
 
