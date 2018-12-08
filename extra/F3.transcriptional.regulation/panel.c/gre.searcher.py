@@ -2,8 +2,12 @@
 ### This script looks for different GREs between two sets of transcripts. need not to bump into another gene.
 ###
 
-import sys
+import sys,os,numpy
 import matplotlib,matplotlib.pyplot
+import sklearn,sklearn.decomposition
+
+matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
+matplotlib.rcParams['pdf.fonttype']=42
 
 def fastaFileReader():
 
@@ -90,11 +94,14 @@ def upstreamSelector():
 ### MAIN
 
 # 0. user defined variables
+regulatorySequenceSize=100
 
 # 0.1. paths
+GREsDir='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/positions/hal_gres/'
 groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/ribo.groupings.csv'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+positionsFile='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/positions/hal_genes.tsv'
 
 # 1. read data
 
@@ -145,17 +152,38 @@ with open(annotationFile,'r') as f:
             geneOrientations[id]=strand
 
 # 1.4 convert new annotation to old annotation
-annotationMap={}
+annotationMap={}; reverseAnnotationMap={}
 with open(annotationFile,'r') as f:
     next(f)
     next(f)
     next(f)
     for line in f:
         v=line.split('\t')
-        print(v)
-        sys.exit()
-sys.exit()
+        info=v[-1]
+        if 'old_locus_tag' in info:
+            new=info.split('ID=')[1].split(';')[0]
+            old=info.split('old_locus_tag=')[1].split(';')[0].split('\n')[0]
+            annotationMap[new]=old
+            reverseAnnotationMap[old]=new
 
+# 1.5. associate regulatory regions to genes in the old annotation
+regulatoryRegions={}
+with open(positionsFile,'r') as f:
+    next(f)
+    for line in f:
+        v=line.split('\t')
+        name=v[1]
+        a=int(v[3])
+        strand=v[5]
+        if strand == '+':
+            region=[a-regulatorySequenceSize,a]
+        elif strand == '-':
+            region=[a,a+regulatorySequenceSize]
+        else:
+            print('error while reading strand')
+            sys.exit()
+        regulatoryRegions[name]=region
+        
 # 2. trim gene sets to operon heads
 geneLeaders=[] # genes that are either not part of an operon or operon headers
 
@@ -174,31 +202,122 @@ for element in expressionCoordinates:
                 if element == rbptOperons[operon][-1]:
                     geneLeaders.append(element)
 
-
-print(rbptOperons)
-print()
-print(geneLeaders)
-
 # 3. plot fold-changes of gene leaders
 for leader in geneLeaders:
     x=expressionCoordinates[leader][1]
     y=expressionCoordinates[leader][0]
-    matplotlib.pyplot.plot(x,y,'ok')
+    if leader in geneSets['group A']:
+        matplotlib.pyplot.plot(x,y,'or')
+    else:
+        matplotlib.pyplot.plot(x,y,'ob')
+        print('bLEADER',leader)
 
 matplotlib.pyplot.xlabel('median expression')
 matplotlib.pyplot.ylabel('fold-change')
+
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.axes().set_aspect('equal')
 matplotlib.pyplot.savefig('figure.gene.expression.leaders.pdf')
+matplotlib.pyplot.clf()
 
 # 4. obtain GRE counts for each gene
+geneGREs={}
+for leader in geneLeaders:
+    
+    # 4.1. convert from new annotation to old annotation
+    oldAnnotation=annotationMap[leader]
 
-# 4.1. convert from new annotation to old annotation
+    print(leader,oldAnnotation)
+    
+    # 4.2. define the region of interest considering the gff3 file provided by Wei-ju
+    regionOfInterest=regulatoryRegions[oldAnnotation]
+    regulatoryDomain=numpy.arange(regionOfInterest[0],regionOfInterest[1])
 
-# 4.2. define the region of interest considering the gff3 file provided by Wei-ju
+    # 4.3. convert each GRE PDF into an integral above a threshold of say 10
+    path2search=GREsDir+oldAnnotation
+    allFiles=os.listdir(path2search)
+    GREfiles=[element for element in allFiles if element[:3] == 'hal']
+    for dimension in GREfiles:
 
-# 4.3. convert each GRE PDF into an integral
+        GREID=int(dimension.split('hal_')[1].split('.tsv')[0])
+        dataFile=path2search+'/'+dimension
 
+
+        # recover GREs above a threshold=10
+        threshold=10
+        counts=[]
+        with open(dataFile,'r') as f:
+            next(f)
+            for line in f:
+                v=line.split('\t')
+                pos=int(v[0])
+                count=int(v[1])
+                hit=pos in regulatoryDomain
+
+                if hit == True and count >= threshold:
+                    counts.append(count)
+
+        # compute the integral
+        if len(counts) > 0:
+            if oldAnnotation not in geneGREs:
+                geneGREs[oldAnnotation]={}
+            
+            integral=sum(counts)/len(counts)
+            geneGREs[oldAnnotation][GREID]=integral
+            print('#####',GREID,integral)
+    print()
 
 # 5. make a PCA plot of proportions, or face values of integrals
+
+# 5.1. retrieve labels of the dimensions
+dimensions=[]
+GREgenes=list(geneGREs.keys())
+GREgenes.sort()
+                  
+for gene in GREgenes:
+    for dimension in geneGREs[gene]:
+        if dimension not in dimensions:
+            dimensions.append(dimension)
+dimensions.sort()
+
+# 5.2. compute a table with GREs 9 and 28 or others, grouped by group A or group B
+GREdistribution={}
+GREdistribution['group A']={}
+GREdistribution['group B']={}
+
+for gene in GREgenes:
+
+    if reverseAnnotationMap[gene] in geneSets['group A']:
+        groupLabel='group A'
+    elif reverseAnnotationMap[gene] in geneSets['group B']:
+        groupLabel='group B'
+    else:
+        print('error while associating gene to a group')
+        sys.exit()
+
+    if '9.and.28' not in GREdistribution[groupLabel]:
+        GREdistribution[groupLabel]['9.and.28']=0
+    if '7' not in GREdistribution[groupLabel]:
+        GREdistribution[groupLabel]['7']=0
+    if 'others' not in GREdistribution[groupLabel]:
+        GREdistribution[groupLabel]['others']=0
+
+    for dimension in dimensions:
+        if dimension in geneGREs[gene]:
+            value=geneGREs[gene][dimension]
+        else:
+            value=0.
+            
+        # adding to GREdistribution
+        if dimension == 9 or dimension == 28:
+            GREdistribution[groupLabel]['9.and.28']=GREdistribution[groupLabel]['9.and.28']+value
+        elif dimension == 7:
+            GREdistribution[groupLabel]['7']=GREdistribution[groupLabel]['7']+value
+        else:
+            GREdistribution[groupLabel]['others']=GREdistribution[groupLabel]['others']+value
+            
+print(GREdistribution)                                
+
 
 
 
