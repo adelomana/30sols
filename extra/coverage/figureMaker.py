@@ -277,7 +277,7 @@ experiments=['rbf','trna']
 
 colors=['red','orange','green','blue']
 
-margin=100 # excess of base pairs
+margin=0 # excess of base pairs
 
 # 1. read data
 print('reading data...')
@@ -289,6 +289,8 @@ geneAnnotations=geneAnnotationReader()
 riboOperons,NORPGs=dataReader()
 genomicFeatures=list(riboOperons.keys())+NORPGs
 genomicFeatures.sort()
+
+genomicFeatures=['gene-VNG_RS06605']
 
 # 1.3. define synonyms
 synonyms=synonymsReader()

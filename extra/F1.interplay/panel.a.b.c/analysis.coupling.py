@@ -538,6 +538,7 @@ print('\t\t r_value',r_value)
 print('\t\t pvalue',p_value)
 print('\t\t std_err',std_err)
 
+
 # compute for the model
 m=slope
 c=intercept

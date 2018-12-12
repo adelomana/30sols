@@ -166,10 +166,10 @@ def dataReader():
 ###
 
 # 0. user defined variables
-bamFilesDir='/proj/omics4tb/alomana/projects/TLR/data/BAM/'
-annotationFile='/proj/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
-coverageDir='/proj/omics4tb/alomana/projects/TLR/data/coverage/'
-operonPredictionsDir='/proj/omics4tb/alomana/projects/TLR/data/microbesOnline/'
+bamFilesDir='/Volumes/omics4tb/alomana/projects/TLR/data/BAM/'
+annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+coverageDir='/Volumes/omics4tb/alomana/projects/TLR/data/coverage/'
+operonPredictionsDir='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/'
 
 timepoints=['tp.1','tp.2','tp.3','tp.4']
 replicates=['rep.1','rep.2','rep.3']
@@ -191,8 +191,11 @@ annotationObject=HTSeq.GFF_Reader(annotationFile)
 genomicFeatures=list(riboOperons.keys())+NORPGs
 genomicFeatures.sort()
 
+genomicFeatures=['gene-VNG_RS06605']
+
 # 2.3.a. iterate over genomicFeatures in a parallel manner
 numberOfThreads=len(genomicFeatures)
+
 print('Initialized parallel analysis using {} threads...'.format(numberOfThreads))
 hydra=multiprocessing.pool.Pool(numberOfThreads)
 tempo=hydra.map(analysis,genomicFeatures)

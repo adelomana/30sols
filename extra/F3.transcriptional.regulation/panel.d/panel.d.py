@@ -45,6 +45,15 @@ def regressionAnalysis(x,y):
     http://markthegraph.blogspot.com/2015/05/using-python-statsmodels-for-ols-linear.html
     '''
 
+    # f.0 run a simple correlation analysis
+    print('\t regression results:')
+    slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
+    print('\t\t slope',slope)
+    print('\t\t intercept',intercept)
+    print('\t\t r_value',r_value)
+    print('\t\t pvalue',p_value)
+    print('\t\t std_err',std_err)
+
     # f.1. build regression model
     xc=statsmodels.api.add_constant(x) # constant intercept term
     model=statsmodels.api.OLS(y,xc)
@@ -148,7 +157,7 @@ for i in range(len(riboPtNames)):
     # check if values are above or below PI
     if riboy[i] > limitTop:
         theColor='red'; theAlpha=1
-        expected=
+        #expected=
         print('\t {} detected as upper outlier at x={}; y={}.'.format(riboPtNames[i],ribox[i],riboy[i]))
         
     elif riboy[i] < limitBottom:
