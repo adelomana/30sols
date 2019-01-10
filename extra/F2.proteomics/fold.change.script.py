@@ -135,17 +135,23 @@ def violinAnalysis():
     violinStructure={}; violinNames={}
 
     L14pREF=[]
+
+    # define a file to save plotting value
+    f=open(plotValuesFile,'w')
     
     for fraction in proteinConditions:
+        f.write('{}\n'.format(fraction))
         timeStamp=0
         for timepoint in proteinTimepoints:
+            f.write('{}\n'.format(timepoint))
             timeStamp=timeStamp+1
-
+            
             label=fraction+timepoint
             if label not in violinStructure:
                 violinStructure[label]=[]; violinNames[label]=[]
                 
             for name in riboPtNames:
+                f.write('{}\t'.format(synonymsReverseMapping[name]))
                 values=[]
                 for replicate in proteinReplicates:
                     value=None
@@ -160,29 +166,28 @@ def violinAnalysis():
                     sem=numpy.std(values)/numpy.sqrt(len(values))
                     rsem=sem/numpy.mean(values)
                     if rsem < 0.3:
-                        
-                        violinStructure[label].append(value); violinNames[label]=name
+                        f.write('{}\n'.format(average))
+                        violinStructure[label].append(average); violinNames[label]=name
 
                         if fraction == 'lysate':
-                            foldChangesFCL.append(value); timeStampsFCL.append(timeStamp)
+                            foldChangesFCL.append(average); timeStampsFCL.append(timeStamp)
                         else:
-                            foldChangesREF.append(value); timeStampsREF.append(timeStamp)
+                            foldChangesREF.append(average); timeStampsREF.append(timeStamp)
                             if name == 'gene-VNG_RS06605':
-                               L14pREF.append([value,timeStamp])
+                               L14pREF.append([average,timeStamp])
                         if value > 0:
                             print('FC > 0: ',fraction,timepoint,name,value)
                     else:
+                        f.write('HCV\n')
                         print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
                 else:
+                    f.write('ND\n')
                     print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
             localList=violinStructure[label]
             cv=numpy.std(localList)/numpy.mean(localList)
             print('{}; n = {}; median = {}; cv = {}'.format(label,len(localList),numpy.median(localList),cv))
 
-            # define outliers
-            #outliersDefiner(violinStructure[label],violinNames[label])
-
-    ###yLimits=[-4.5,1.5]
+    f.close()
     
     # create a dataframe for plotting with seaborn
     foldChangeData=list(zip(timeStampsREF,foldChangesREF))
@@ -197,23 +202,11 @@ def violinAnalysis():
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
-    #matplotlib.pyplot.ylim(yLimits)
-
-    print(L14pREF)
-    x=[element[0] for element in L14pREF]
-    print(x)
-    matplotlib.pyplot.plot([0,1,2],x,'-k')
-    #sys.exit()
 
     # final figure closing
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Protein rel. abundance (log$_2$ FC)')
-    #matplotlib.pyplot.ylim(yLimits)
-    #generalTickLabels=['t2.FCL','t2.REF','t3.FCL','t3.REF','t4.FCL','t4.REF']
-
-    #specificTickLabels=[generalTickLabels[i]+'\nn={}'.format(countsDict[i+1]) for i in range(len(generalTickLabels))]
-    #matplotlib.pyplot.xticks([0,1,2,3,4,5],specificTickLabels)
 
     figureName='figure.violin.ribo.pdf'
     matplotlib.pyplot.tight_layout()
@@ -230,6 +223,7 @@ def violinAnalysis():
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+plotValuesFile='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/violin/foldChanges.txt'
 
 # 1. read data
 print('reading data...')

@@ -100,11 +100,14 @@ def figureGrapher(colorAssociation):
 
     thresholds={}
 
+    # define a file to save plotting value
+    f=open(plotValuesFile,'w')
+
     # f.2. compute stoichiometries
     for i in range(len(timepoints)):
-
         timeLabel=timePointLabels[i+1]
-        
+        f.write('{}\n'.format(timeLabel))
+
         if timeLabel not in foldChangeInfo:
             foldChangeInfo[timeLabel]={}
 
@@ -128,7 +131,7 @@ def figureGrapher(colorAssociation):
                 average=numpy.median(values)
                 sem=numpy.std(values)/numpy.sqrt(len(values))
                 rsem=sem/numpy.mean(values)
-                if rsem < 0.3: 
+                if rsem < 0.3:
                     foldChangeInfo[timeLabel][ribopt]=2**average
                 else:
                     noisyStoichInfo[timeLabel][ribopt]=rsem
@@ -152,13 +155,7 @@ def figureGrapher(colorAssociation):
         standardDeviation=numpy.std(log2Stoich)
         low=mean-standardDeviation; high=mean+standardDeviation
 
-        # IQ
-        #Q1=numpy.percentile(log2Stoich,25)
-        #Q3=numpy.percentile(log2Stoich,75)
-        #iqr=Q3-Q1
-        #low=Q1-(1.5*iqr)
-        #high=Q3+(1.5*iqr)
-        
+        # margins
         margin=0.2
         a=i+1-margin
         b=i+1+margin
@@ -169,9 +166,9 @@ def figureGrapher(colorAssociation):
         for i in range(len(localNames)):
             v=log2Stoich[i]
             timeStampsViolin.append(timeLabel); stoichValuesViolin.append(v)
+            f.write('{}\t{}\n'.format(localNames[i],v))
             if v > high or v < low:
 
-                #print('value = {}; stoich = {}, significance found for {} on {}'.format(v,2**v,localNames[i],timeLabel))
                 print('log2FC={} \t FC={} \t localName={} \t timeLabel={}'.format(v,2**v,nameAliases[localNames[i]],timeLabel))
 
                 if localNames[i] not in significantPositions:
@@ -183,6 +180,7 @@ def figureGrapher(colorAssociation):
                     significantNames.append(localNames[i])
             else:
                 timeStampsSwarm.append(timeLabel); stoichValuesSwarm.append(v)
+    f.close()
 
     # f.3. create a dataframe for plotting with seaborn
     stoichiometryViolin=list(zip(timeStampsViolin,stoichValuesViolin))
@@ -222,10 +220,8 @@ def figureGrapher(colorAssociation):
             matplotlib.pyplot.plot(x,y,'o',color=colorAssociation[name],ms=theDotSize*2.5,mew=0)
         else:
             matplotlib.pyplot.plot(x,y,'o',color='black',ms=theDotSize,mew=0)
-            #matplotlib.pyplot.text(x[0],y[0],nameAliases[name])
             
     # f.8. final figure closing
-    #matplotlib.pyplot.ylim([-2.2,2.2])
     matplotlib.pyplot.grid(alpha=0.5, ls=':')
     matplotlib.pyplot.xlabel('Time point')
     matplotlib.pyplot.ylabel('Ribosome composition (log$_2$ ribo-pt stoichiometry)')
@@ -266,6 +262,7 @@ def riboPtNamesReader():
 dataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 scratchDir='/Volumes/omics4tb/alomana/scratch/'
+plotValuesFile='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/violin/stoichiometry.txt'
 
 timePointLabels=['TP1','TP2','TP3','TP4']
 theDotSize=3
@@ -279,5 +276,6 @@ riboPtNames,nameAliases=riboPtNamesReader()
 # 2. analyse data
 print('analyzing data...')
 colorAssociation={}
+conditions=['rbf']
 for condition in conditions:
     colorAssociation=figureGrapher(colorAssociation)
