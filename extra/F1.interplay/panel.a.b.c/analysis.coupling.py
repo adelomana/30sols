@@ -409,7 +409,7 @@ for timepoint in timepoints:
             sem=numpy.std(log2M)/numpy.sqrt(len(log2M))
             rsem_mRNA=sem/numpy.mean(log2M)
         else:
-            rsem_RNA=0
+            rsem_mRNA=0
             
         if numpy.max(log2F) > numpy.log2(10+1): # if expression is below 10 TPMs, don't consider noise
             sem=numpy.std(log2F)/numpy.sqrt(len(log2F))
@@ -418,7 +418,7 @@ for timepoint in timepoints:
             rsem_RF=0
         
         # medians and ratio
-        m=numpy.median(log10M);
+        m=numpy.median(log10M)
         r=numpy.median(log2F)-numpy.median(log2M)
 
         # differenciate between trasncripts with or without footprints

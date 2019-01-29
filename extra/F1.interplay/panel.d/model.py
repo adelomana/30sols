@@ -111,6 +111,8 @@ def grapher(changes,flag):
             probingGenes.append(geneName)
         else:
             print('bypassing {}/{}...'.format(geneName,oldName))
+
+    print('probing genes: {}'.format(len(probingGenes)))
         
     for geneName in probingGenes:
         
