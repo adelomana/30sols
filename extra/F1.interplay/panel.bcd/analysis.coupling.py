@@ -11,11 +11,12 @@
 ### (Section 5) an analysis about the relationship of expression and half-life. "expression.half-life.pdf"
 
 import sys,math,pandas,seaborn
-import matplotlib,matplotlib.pyplot
 import numpy,numpy.linalg
 import scipy,scipy.stats
 
+import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
+matplotlib.rcParams['pdf.fonttype']=42
 
 def DETreader():
 
