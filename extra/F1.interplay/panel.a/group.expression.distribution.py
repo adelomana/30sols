@@ -1,5 +1,5 @@
 ###
-### This script makes a figure of the distribution of 
+### This script makes a figure of the distribution of expression for the different regulatory groups
 ###
 
 import os,sys,numpy
@@ -14,8 +14,6 @@ def histogrammer(theData):
 
     x=[]; y=[]
     
-    #n,bins=numpy.histogram(theData,bins=int(numpy.sqrt(len(theData))))
-
     binSize=0.1
     left=0
     right=5
@@ -35,7 +33,7 @@ def histogrammer(theData):
 def transcriptomicsReader():
 
     '''
-    this function reads transcriptomics data as in
+    This function reads transcriptomics data as in
     transcriptomics[trna/rbf][replicate][timepoint][gene]
     '''
 
@@ -114,6 +112,7 @@ longNames=['gene-'+element for element in geneNames]
 geneSets['all']=longNames
             
 # 2. convert group memmberships into expression distributions
+print('converting group memberships into expression distributions...')
 expressionDistributions={}
 for element in geneSets.keys():
     expressionDistributions[element]=[]
@@ -141,70 +140,70 @@ for element in geneSets.keys():
             m=numpy.median(log10M)
             expressionDistributions[element].append(m)
             
-# print the number of retrieved expressions and convert to distribution
+# 3. define significance of deviation
+print('running hypothesis test of deviation...')
+
 groupLabels=list(expressionDistributions.keys())
 groupLabels.sort()
 groupLabels.remove('dubious')
-print(groupLabels)
+
 theColors=['black','black','black','blue','green','orange','red','yellow']
 theLineStyle=['-',':','--','-','-','-','-','-']
 
-groupLabels=['orange','green']
-print(groupLabels)
-theColors=['orange','green']
-theLineStyle=['-','-']
+# run specific groups
+
+#groupLabels=['orange','green']
+#theColors=['orange','green']
+
+#groupLabels=['black.minus', 'black.plus','blue','red']
+#theColors=['black','black','blue','red']
+
+groupLabels=['yellow']
+theColors=['yellow']
 
 # make a figure of the overal distribution
 x,y=histogrammer(expressionDistributions['all'])
 matplotlib.pyplot.plot(x,y,'-',color='black',lw=1)
             
 for i in range(len(groupLabels)):
-    print(groupLabels[i],len(expressionDistributions[groupLabels[i]]))
 
     # resample
-    #numberOfElements=len(expressionDistributions[groupLabel])
-    numberOfElements=10000
+    numberOfElements=int(1e5)
     workingDist=expressionDistributions[groupLabels[i]]
     measuredAverage=numpy.mean(workingDist)
 
     averageDist=[]
     for j in range(numberOfElements):
         sample=numpy.random.choice(expressionDistributions['all'],len(workingDist))
-        #print(len(workingDist))
         average=numpy.mean(sample)
         averageDist.append(average)
     
-    # make a test
+    # hypothesis test
     higherRandoms=sum(numpy.greater(averageDist,measuredAverage))
     if higherRandoms > numberOfElements/2:
-        pvalue=1-(higherRandoms/numberOfElements)
+        pvalue=1-(higherRandoms/float(numberOfElements))
     else:
-        pvalue=higherRandoms/numberOfElements
-
-    #if pvalue < 0.05:
+        pvalue=higherRandoms/float(numberOfElements)
+    print('Group label {} has a deviation whose p-value is {}. Out of {} trials'.format(groupLabels[i],pvalue,numberOfElements))
+    
     # make a figure of the expected group distribution
     x,y=histogrammer(averageDist)
-    matplotlib.pyplot.plot(x,y,linestyle=theLineStyle[i],color=theColors[i],lw=2,alpha=0.5)
+    matplotlib.pyplot.plot(x,y,linestyle=':',color=theColors[i],lw=1,alpha=0.5)
     # make the line
-    matplotlib.pyplot.vlines(x=measuredAverage,color=theColors[i],ymin=0,ymax=0.6,linestyle=theLineStyle[i])
+    matplotlib.pyplot.axvline(x=measuredAverage,color=theColors[i],linestyle='-',lw=2)
     # make the dist of group
-    #x,y=histogrammer(workingDist)
-    #matplotlib.pyplot.plot(x,y,linestyle=':',color=theColors[i],lw=1,alpha=0.5)
 
-matplotlib.pyplot.xlim([-0.1,5.])
-matplotlib.pyplot.ylim([-0.01,0.3])
+matplotlib.pyplot.xlim([-0.1,4.])
+matplotlib.pyplot.ylim([-0.01,0.6])
 
-#matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-
-matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.xlabel('mRNA (log$_{10}$ TPM+1)')
 matplotlib.pyplot.ylabel('Probability')
 
-#matplotlib.pyplot.title('pvalue:{:.4f}'.format(pvalue))
-
 matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig('figure.expression.distribution.all.png',dpi=300)
-matplotlib.pyplot.clf()
 
-    #sys.exit()
-    
-    
+#matplotlib.pyplot.savefig('figure.expression.distribution.TL.pdf')
+#matplotlib.pyplot.savefig('figure.expression.distribution.TC.pdf')
+matplotlib.pyplot.savefig('figure.expression.distribution.yellow.pdf')
+
+
+matplotlib.pyplot.clf()
