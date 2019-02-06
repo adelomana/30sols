@@ -156,7 +156,7 @@ theLineStyle=['-',':','--','-','-','-','-','-']
 #theColors=['orange','green']
 
 #groupLabels=['black.minus', 'black.plus','blue','red']
-#theColors=['black','black','blue','red']
+#theColors=['gainsboro','dimgrey','blue','red']
 
 groupLabels=['yellow']
 theColors=['yellow']
@@ -168,7 +168,7 @@ matplotlib.pyplot.plot(x,y,'-',color='black',lw=1)
 for i in range(len(groupLabels)):
 
     # resample
-    numberOfElements=int(1e5)
+    numberOfElements=int(1e6)
     workingDist=expressionDistributions[groupLabels[i]]
     measuredAverage=numpy.mean(workingDist)
 
@@ -188,10 +188,8 @@ for i in range(len(groupLabels)):
     
     # make a figure of the expected group distribution
     x,y=histogrammer(averageDist)
-    matplotlib.pyplot.plot(x,y,linestyle=':',color=theColors[i],lw=1,alpha=0.5)
-    # make the line
-    matplotlib.pyplot.axvline(x=measuredAverage,color=theColors[i],linestyle='-',lw=2)
-    # make the dist of group
+    matplotlib.pyplot.plot(x,y,linestyle=':',color=theColors[i],lw=2,alpha=0.5)    
+    matplotlib.pyplot.axvline(x=measuredAverage,color=theColors[i],linestyle='-',lw=3)
 
 matplotlib.pyplot.xlim([-0.1,4.])
 matplotlib.pyplot.ylim([-0.01,0.6])
@@ -204,6 +202,5 @@ matplotlib.pyplot.tight_layout()
 #matplotlib.pyplot.savefig('figure.expression.distribution.TL.pdf')
 #matplotlib.pyplot.savefig('figure.expression.distribution.TC.pdf')
 matplotlib.pyplot.savefig('figure.expression.distribution.yellow.pdf')
-
 
 matplotlib.pyplot.clf()
