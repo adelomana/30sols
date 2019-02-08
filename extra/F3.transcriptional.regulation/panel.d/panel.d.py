@@ -4,9 +4,8 @@
 ###
 
 import numpy,sys
-import statsmodels,statsmodels.api,statsmodels.sandbox,statsmodels.sandbox.regression,statsmodels.sandbox.regression.predstd
-
 import scipy,scipy.stats
+import statsmodels,statsmodels.api,statsmodels.sandbox,statsmodels.sandbox.regression,statsmodels.sandbox.regression.predstd
 
 import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})

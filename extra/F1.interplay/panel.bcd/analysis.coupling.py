@@ -13,6 +13,7 @@
 import sys,math,pandas,seaborn
 import numpy,numpy.linalg
 import scipy,scipy.stats
+import statsmodels,statsmodels.api,statsmodels.sandbox,statsmodels.sandbox.regression,statsmodels.sandbox.regression.predstd
 
 import matplotlib,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':18,'font.family':'Arial','xtick.labelsize':14,'ytick.labelsize':14})
@@ -134,6 +135,57 @@ def NCsynonymsReader():
         transcriptLengths[rsName]=transcriptLength
 
     return NCsynonyms,transcriptLengths
+
+def regressionAnalysis(x,y):
+
+    '''
+    This function performs regression analysis based on:
+    http://markthegraph.blogspot.com/2015/05/using-python-statsmodels-for-ols-linear.html
+    '''
+
+    # f.0 run a simple correlation analysis
+    print('\t regression results:')
+    slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
+    print('\t\t slope',slope)
+    print('\t\t intercept',intercept)
+    print('\t\t r_value',r_value)
+    print('\t\t pvalue',p_value)
+    print('\t\t std_err',std_err)
+
+    # f.1. build regression model
+    xc=statsmodels.api.add_constant(x) # constant intercept term
+    model=statsmodels.api.OLS(y,xc)
+    fitted=model.fit()
+
+    #print(fitted.params)     # the estimated parameters for the regression line
+    #print(fitted.summary())  # summary statistics for the regression
+
+    # f.2. interpolate model
+    a=x.min()
+    b=x.max()
+    x_pred=numpy.linspace(a,b,100)
+    x_pred2=statsmodels.api.add_constant(x_pred)
+    y_pred=fitted.predict(x_pred2)
+    regressionLine=[x_pred,y_pred]
+
+    # f.3. compute CI
+    y_hat=fitted.predict(xc)
+    y_err=y-y_hat
+    mean_x=xc.T[1].mean()
+    n=len(xc)
+    dof=n-fitted.df_model-1
+    t=scipy.stats.t.ppf(1-0.025,df=dof)
+    s_err=numpy.sum(numpy.power(y_err, 2))
+    conf = t * numpy.sqrt((s_err/(n-2))*(1.0/n + (numpy.power((x_pred-mean_x),2) / ((numpy.sum(numpy.power(x_pred,2))) - n*(numpy.power(mean_x,2))))))
+    upper=y_pred+abs(conf)
+    lower=y_pred-abs(conf)
+    CI=[upper,lower]
+
+    # f.4. compute PI
+    sdevP,lowerP,upperP=statsmodels.sandbox.regression.predstd.wls_prediction_std(fitted,exog=x_pred2,alpha=0.05)
+    PI=[upperP,lowerP]
+
+    return regressionLine,CI,PI
 
 def transcriptionalRegulationAnalyzer():
 
@@ -364,6 +416,7 @@ matplotlib.pyplot.clf()
 
 # 2.1. build figures on general pattern
 sat=[] # needed for second part of the script, the pattern model
+diagonalDeviations={} # diagonalDeviations[TP1|TP2|TP3|TP4][up|neutral|down]=[name1,name2,name3,...]
 
 totalSetx=[]; totalSety=[]; totalHollowx=[]; totalHollowy=[]
 
@@ -378,13 +431,17 @@ for timepoint in timepoints:
 
     figureName='figures/TE.trend.{}.pdf'.format(timepoint)
 
-    setx=[]; sety=[]
+    setx=[]; sety=[]; setNames=[]
     hollowx=[]; hollowy=[]
     cloudColors=[]; groundColors=[]
 
     # necessary for transcriptional regulation analysis figure
     expSet={}
     distSets={} # to be constructed inside transcriptionalRegulationAnalyzer function
+
+    # necessary for deviation and expression of upregulated genes
+    diagonalDeviations[timepoint]={}
+    diagonalDeviations[timepoint]['up']=[]; diagonalDeviations[timepoint]['neutral']=[]; diagonalDeviations[timepoint]['down']=[]
     
     for geneName in geneNames:
 
@@ -451,7 +508,7 @@ for timepoint in timepoints:
         else:
             if rsem_mRNA < 0.3 and rsem_RF < 0.3:        
 
-                setx.append(m); sety.append(r)
+                setx.append(m); sety.append(r); setNames.append(geneName)
                 totalSetx.append(m); totalSety.append(r)
 
                 # required for TE vs transcriptional regulation analysis
@@ -480,7 +537,7 @@ for timepoint in timepoints:
     print('\t\t intercept',intercept)
     print('\t\t r_value',r_value)
     print('\t\t pvalue',p_value)
-    print('\t\t std_err',std_err) 
+    print('\t\t std_err',std_err)
 
     # compute for the model
     m=slope
@@ -503,12 +560,34 @@ for timepoint in timepoints:
         
     # plot figure
     for i in range(len(setx)):
-        matplotlib.pyplot.plot(setx[i],sety[i],'o',alpha=0.5,mew=0,color='black')
+        matplotlib.pyplot.plot(setx[i],sety[i],'o',alpha=0.05,mew=0,color='black')
     for i in range(len(hollowx)):
-        matplotlib.pyplot.plot(hollowx[i],hollowy[i],'o',alpha=0.5,mew=0,color='tan')
-    
-    matplotlib.pyplot.plot(setx,expected,'-',lw=1,color=theColor[timepoint])
-    
+        matplotlib.pyplot.plot(hollowx[i],hollowy[i],'o',alpha=0.05,mew=0,color='tan')
+    matplotlib.pyplot.plot(setx,expected,'-',lw=2,color=theColor[timepoint])
+
+    # PI analysis
+    regressionLine,CI,PI=regressionAnalysis(numpy.array(setx),numpy.array(sety))
+    matplotlib.pyplot.plot(regressionLine[0],regressionLine[1],color='black',lw=1)
+    matplotlib.pyplot.fill_between(regressionLine[0],PI[1],PI[0],color='black',alpha=0.1,lw=0)
+    for i in range(len(setNames)):
+        # find the regression point closer to ribox[i] and define the approximate limit from PI
+        distances=[abs(position-setx[i]) for position in regressionLine[0]]
+        index=distances.index(min(distances))
+        limitTop=PI[0][index]
+        limitBottom=PI[1][index]
+        # check if values are above or below PI
+        if sety[i] > limitTop:
+            devColor='red'
+            diagonalDeviations[timepoint]['up'].append(setNames[i])
+        elif sety[i] < limitBottom:
+            devColor='blue'
+            diagonalDeviations[timepoint]['down'].append(setNames[i])
+        else:
+            devColor='black'
+            diagonalDeviations[timepoint]['neutral'].append(setNames[i])
+        # plot the point
+        matplotlib.pyplot.plot(setx[i],sety[i],'.',color=devColor,mew=0,ms=4)
+        
     matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
     matplotlib.pyplot.ylabel('footprint/mRNA [log$_{2}$ ratio]')
 
@@ -527,6 +606,14 @@ for timepoint in timepoints:
     if timepoint != 'tp.1':
         transcriptionalRegulationAnalyzer()
 
+# save information about deviations from diagonal into a text file
+with open('diagonal.deviated.names.txt','w') as f:
+    for tp in diagonalDeviations.keys():
+        for label in diagonalDeviations[tp].keys():
+            for name in diagonalDeviations[tp][label]:
+                f.write('{}\t{}\t{}\n'.format(tp,label,name))
+
+# build figure for all time points
 print('building figure for all time points...')
 matplotlib.pyplot.plot(totalSetx,totalSety,'o',alpha=0.0333,mew=0,color='black')
 matplotlib.pyplot.plot(totalHollowx,totalHollowy,'o',alpha=0.0333,mew=0,color='tan')
@@ -539,12 +626,10 @@ print('\t\t r_value',r_value)
 print('\t\t pvalue',p_value)
 print('\t\t std_err',std_err)
 
-
 # compute for the model
 m=slope
 c=intercept
 expected=list(m*numpy.array(totalSetx)+c)
-
 matplotlib.pyplot.plot(totalSetx,expected,'-',lw=2,color='black')
 
 matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
