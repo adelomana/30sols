@@ -1,4 +1,4 @@
-### script to generate Figures 1A and B of manuscript
+### script to generate Figures 4A and B of manuscript
 
 bootplot <- function(genelist, network = 'corem', transpose = TRUE) {
   library(pvclust)
