@@ -1,5 +1,5 @@
 ###
-### script to build initial networks of Fig. 3
+### script to build interaction networks with RPG corems
 ###
 
 draw.subnetwork <- function(listgenes) {
