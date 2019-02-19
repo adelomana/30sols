@@ -2,7 +2,8 @@ library(pheatmap)
 library(viridis)
 
 # 1. reading and treating data
-setwd("~/github/30sols/GREs")
+here=getwd()
+setwd(here)
 data=as.matrix(read.table('/Volumes/omics4tb/alomana/projects/TLR/data/GREs/ribosomal_corems_motif_counts.clean.csv',header=TRUE,sep = ",",row.names=1))
 data[data>50]=50
 dim(data)

@@ -19,7 +19,7 @@ def backgroundComputer():
     complementaryGenes=[element for element in allGenes if element not in genes]
     
     # for each block of conditions
-    for block in sortedConditions:
+    for block in sortedBlockConditions:
 
         background[block]={}
         background[block]['Q1']=None
@@ -305,6 +305,8 @@ def dimensionalityReductionAnalyses():
     print(N.shape,len(coremLabels))
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
 
+    """
+    
     # 2. only ribosomal corems
     theColors=[]; theAlphas=[]
     for i in range(len(allRiboCorems)):
@@ -341,6 +343,8 @@ def dimensionalityReductionAnalyses():
     figureFile='figures/figure.tSNE.ribo.pdf'
     perplexityValue=5
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
+
+    """
     
     return None
 
@@ -464,7 +468,7 @@ def heatmapSimilaritiesPlotter(similarities):
                 V=numpy.hstack((V,similarities[i][sortedComputedBlockConditions[j]]))
 
         # plotting figure
-        figureName='figures/similarity.{}.pdf'.format(methodLabels[i])
+        figureName='figures/similarity.{}.png'.format(methodLabels[i])
     
         matplotlib.pyplot.imshow(V,interpolation='none',cmap='viridis',vmin=0.,vmax=1.)
 
@@ -542,7 +546,7 @@ def pcaCaller(N,theColors,theAlphas,figureFile):
 
 def plotter(label,analysedData,sortedBlockConditions):
 
-    figureFile='figures/{}.{}.pdf'.format(label,iterations)
+    figureFile='figures/{}.iter{}.pdf'.format(label,iterations)
     customMap=matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax=20),cmap='tab20')
     shift=0
     ceil=0; floor=0
@@ -550,8 +554,6 @@ def plotter(label,analysedData,sortedBlockConditions):
     
     # selecting the sorted conditions
     for block in sortedBlockConditions:
-
-        print(broadCondition)
 
         # defining background values
         backgroundBottom=background[block]['Q1']
@@ -568,7 +570,7 @@ def plotter(label,analysedData,sortedBlockConditions):
         top=[analysedData[block]['Q3'][index] for index in sortedIndex]
 
         # defining the same order of conditions for background
-        sortedBackgroundBottom=[block[index] for index in sortedIndex]
+        sortedBackgroundBottom=[backgroundBottom[index] for index in sortedIndex]
         sortedBackgroundTop=[backgroundTop[index] for index in sortedIndex]
 
         # obtaining vertical ranges
@@ -578,11 +580,11 @@ def plotter(label,analysedData,sortedBlockConditions):
             floor=min(bottom)
     
         # obtaining the color and legend handles
-        selectedIndex=sortedConditions.index(block)
+        selectedIndex=sortedBlockConditions.index(block)
         if selectedIndex >= 14: # avoiding grey colors, indexes 14 and 15
             selectedIndex=selectedIndex+2
         theColor=customMap.to_rgba(selectedIndex)
-        legendHandles.append(matplotlib.patches.Patch(color=theColor,label=broadCondition))
+        #legendHandles.append(matplotlib.patches.Patch(color=theColor,label=broadCondition))
 
         # plotting
         x=[i+shift for i in range(len(medians))]
@@ -754,11 +756,11 @@ def tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue):
     return None
 
 # 0. user define variables
-allCoremsExpressionDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/allCorems/'
-dataDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/expressionSelectedCorems/'
-metadataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/metadata/array_annot.txt'
-expressionDataFile='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/halo_egrin2_expression_ratios.txt'
-jarDir='/Users/alomana/gDrive2/projects/TLR/data/HsaEGRIN/jars/'
+allCoremsExpressionDir='/Volumes/omics4tb/alomana/projects/TLR/data/HsaEGRIN/allCorems/'
+dataDir='/Volumes/omics4tb/alomana/projects/TLR/data/HsaEGRIN/expressionSelectedCorems/'
+metadataFile='/Volumes/omics4tb/alomana/projects/TLR/data/HsaEGRIN/metadata/array_annot.txt'
+expressionDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/HsaEGRIN/halo_egrin2_expression_ratios.txt'
+jarDir='/Volumes/omics4tb/alomana/projects/TLR/data/HsaEGRIN/jars/'
 iterations=int(1e1)
 
 clusteredCorems={}
@@ -803,18 +805,18 @@ for case in coremPaths:
     analysedData,sortedBlockConditions=dataAnalyser(E,conditions)
 
     # 2.3. compute background distribution
-    #print('\t computing background distribution...')
-    #background=backgroundComputer()
+    print('\t computing background distribution...')
+    background=backgroundComputer()
     
     # 2.4. plotting data
-    #print('\t generating figure...')
-    #label=case.split('.txt')[0]
-    #plotter(label,analysedData,sortedBlockConditions)
+    print('\t generating figure...')
+    label=case.split('.txt')[0]
+    plotter(label,analysedData,sortedBlockConditions)
 
     print('')
 
 # 3. working with corem median profiles
-#coremAverageTrends(aggregateData)
+coremAverageTrends(aggregateData)
 
 # 4. dimensionality reduction analyses
 dimensionalityReductionAnalyses()
