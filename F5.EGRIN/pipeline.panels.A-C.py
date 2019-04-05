@@ -304,20 +304,23 @@ def dimensionalityReductionAnalyses():
     perplexityValue=50
     print(N.shape,len(coremLabels))
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
-
-    """
     
     # 2. only ribosomal corems
+    allRiboCorems=[]
+    for funcClass in clusteredCorems.keys():
+        for element in clusteredCorems[funcClass]:
+            allRiboCorems.append(element)
+        
     theColors=[]; theAlphas=[]
     for i in range(len(allRiboCorems)):
         
-        if allRiboCorems[i] in greenLabels:
+        if allRiboCorems[i] in clusteredCorems['green']:
             theColors.append('green'); theAlphas.append(.8)
-        elif allRiboCorems[i] in redLabels:
+        elif allRiboCorems[i] in clusteredCorems['red']:
             theColors.append('red'); theAlphas.append(.8)
-        elif allRiboCorems[i] in magentaLabels:
+        elif allRiboCorems[i] in clusteredCorems['magenta']:
             theColors.append('magenta'); theAlphas.append(.8)
-        elif allRiboCorems[i] in blueLabels:
+        elif allRiboCorems[i] in clusteredCorems['blue']:
             theColors.append('blue'); theAlphas.append(.8)
         else:
             theColors.append('black'); theAlphas.append(0.1)
@@ -334,6 +337,7 @@ def dimensionalityReductionAnalyses():
         median=numpy.median(Z,axis=0)
         M.append(median)
     N=numpy.array(M)
+    print('Ribo matrix shape:',N.shape)
 
     # 2.1. PCA
     figureFile='figures/figure.pca.ribo.pdf'
@@ -344,7 +348,9 @@ def dimensionalityReductionAnalyses():
     perplexityValue=5
     tSNEcaller(N,theColors,theAlphas,figureFile,perplexityValue)
 
-    """
+    # 2.3. saving a csv file
+    numpy.savetxt("ribo.expression.data.csv",N,delimiter=",")
+    print('theColors',theColors,len(theColors))
     
     return None
 
