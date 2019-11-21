@@ -1,9 +1,10 @@
 import os,sys
+import multiprocessing,multiprocessing.pool
 
 def sample_retriever(sample):
 
     print('')
-    cmd1='time prefetch {} -v --output-directory {}'.format(sample,output_dir)
+    cmd1='time prefetch {} -v --log-level 6 --output-directory {}'.format(sample,output_dir)
     print('\t {}'.format(cmd1))
     os.system(cmd1)
 
@@ -14,12 +15,14 @@ def sample_retriever(sample):
         
     return None
 
-
-# MAIN
+###
+### MAIN
+###
 
 # 0. user defined variables
 accession_list_file='list.txt'
-output_dir='/Users/alomana/scratch/'
+output_dir='/Users/alomana/scratch/third_run/'
+threads=6
 
 # 1. read samples to download
 samples=[]
@@ -30,8 +33,8 @@ with open(accession_list_file,'r') as f:
 print(samples)
 
 # 2. iterate
-for sample in samples:
-    sample_retriever(sample)
+hydra=multiprocessing.pool.Pool(threads)
+hydra.map(sample_retriever,samples)
 
 # 3. last message
 print('')
