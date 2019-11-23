@@ -1,0 +1,181 @@
+(base) madrid 2019-11-19 16:48:44 ~/github/30sol/extra/other_species/ecoli : python kallisto_runner.py 
+reading files...
+['SRR4023274.fastq', 'SRR4023275.fastq', 'SRR4023276.fastq', 'SRR4023278.fastq', 'SRR4023279.fastq', 'SRR4023280.fastq', 'SRR4023281.fastq', 'SRR4023282.fastq']
+processing files...
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023274.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023274.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023274.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 18,237,413 reads, 3,215,882 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 918 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	0m52.994s
+user	1m38.789s
+sys	0m1.782s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023275.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023275.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023275.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 20,168,278 reads, 1,939,152 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 720 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	1m9.007s
+user	1m51.682s
+sys	0m2.219s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023276.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023276.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023276.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 20,346,025 reads, 2,207,861 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 580 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	1m0.707s
+user	1m53.646s
+sys	0m2.155s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023278.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023278.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023278.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 30,011,221 reads, 553,290 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 579 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	1m37.909s
+user	2m47.017s
+sys	0m2.839s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023279.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023279.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023279.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 41,126,274 reads, 286,571 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 355 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	2m14.147s
+user	3m35.363s
+sys	0m3.588s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023280.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023280.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023280.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 27,160,645 reads, 4,271,880 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 394 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	1m19.988s
+user	2m22.713s
+sys	0m2.264s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023281.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023281.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023281.fastq
+[quant] finding pseudoalignments for the reads ...^[[B^[[B done
+[quant] learning parameters for sequence specific bias
+[quant] processed 22,378,225 reads, 476,920 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 1,056 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	1m11.978s
+user	1m58.550s
+sys	0m1.954s
+
+time kallisto quant -i /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/transcriptome/511145.transcriptomes.fasta.index -o /Volumes/omics4tb2/alomana/projects/TLR/data/ecoli/kallisto1e1/SRR4023282.fastq --bias --single -l 180 -s 20 -t 8 -b 10 --fr-stranded /Users/alomana/scratch/not_clean/SRR4023282.fastq
+
+
+[quant] fragment length distribution is truncated gaussian with mean = 180, sd = 20
+[index] k-mer length: 31
+[index] number of targets: 4,611
+[index] number of k-mers: 3,930,625
+[index] number of equivalence classes: 4,860
+[quant] running in single-end mode
+[quant] will process file 1: /Users/alomana/scratch/not_clean/SRR4023282.fastq
+[quant] finding pseudoalignments for the reads ... done
+[quant] learning parameters for sequence specific bias
+[quant] processed 19,186,848 reads, 2,516,125 reads pseudoaligned
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 236 rounds
+[bstrp] number of EM bootstraps complete: 10
+
+
+real	0m51.338s
+user	1m33.566s
+sys	0m1.639s
+(base) madrid 2019-11-19 17:00:25 ~/github/30sol/extra/other_species/ecoli : 
