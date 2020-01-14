@@ -480,7 +480,7 @@ for timepoint in timepoints:
         r=numpy.median(log2F)-numpy.median(log2M)
 
         # differenciate between trasncripts with or without footprints
-        if numpy.median(footprint_TPMs) == 0:
+        if (numpy.median(footprint_TPMs) == 0) or (numpy.median(mRNA_TPMs) < 1):
             if rsem_mRNA < 0.3:
 
                 hollowx.append(m); hollowy.append(r)
@@ -614,6 +614,7 @@ with open('diagonal.deviated.names.txt','w') as f:
                 f.write('{}\t{}\t{}\n'.format(tp,label,name))
 
 # build figure for all time points
+figure=matplotlib.pyplot.figure(figsize=(8,6))
 print('building figure for all time points...')
 matplotlib.pyplot.plot(totalSetx,totalSety,'o',alpha=0.0333,mew=0,color='black')
 matplotlib.pyplot.plot(totalHollowx,totalHollowy,'o',alpha=0.0333,mew=0,color='tan')
@@ -635,12 +636,49 @@ matplotlib.pyplot.plot(totalSetx,expected,'-',lw=2,color='black')
 matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
 matplotlib.pyplot.ylabel('log$_{2}$ TE')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+
+ub=numpy.max([numpy.max(totalSety),numpy.max(totalHollowy)])
+lb=numpy.min([numpy.min(totalSety),numpy.min(totalHollowy)])
+matplotlib.pyplot.ylim([lb+lb*0.05,ub+ub*0.05])
     
 matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.savefig('figures/TE.trend.all.pdf')
 matplotlib.pyplot.clf()
 print('general model plotted.')
 print('')
+
+### plot blocks
+figureName='figures/TE.blocks.order.1.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+seaborn.regplot(x=totalSetx,y=totalSety,x_bins=20,color='black')
+matplotlib.pyplot.xlim([0.5,3.5])
+ub=numpy.mean(totalSety)+1.96*numpy.std(totalSety)
+lb=numpy.mean(totalSety)-1.96*numpy.std(totalSety)
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.ylabel('log$_{2}$ TE')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figureName)
+matplotlib.pyplot.clf()
+
+figureName='figures/TE.blocks.order.1.Q1.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+Q1=numpy.quantile(totalSetx,0.25)
+a=[]; b=[]
+for i in range(len(totalSetx)):
+    if totalSetx[i] < Q1:
+        a.append(totalSetx[i])
+        b.append(totalSety[i])
+seaborn.regplot(x=a,y=b,x_bins=5,order=1,color='red')
+matplotlib.pyplot.xlim([0.65,1.3])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.ylabel('log$_{2}$ TE')
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figureName)
+matplotlib.pyplot.clf()
 
 # 3. plot pattern from model, or panel b
 print('working on infered model predictions...')
@@ -668,11 +706,11 @@ print('working with TE controls...')
 
 # 4.1. TE and transcript length control
 print('\t working on TE and transcript length...')
-
+figureName='figures/TE.control.transcript.length.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
 x=controlLength['withFootprint'][0]
 y=controlLength['withFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t with footprints...')
 print('\t\t\t slope',slope)
@@ -685,13 +723,10 @@ c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='black')
-
 # without
-
 x=controlLength['withoutFootprint'][0]
 y=controlLength['withoutFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t without footprints...')
 print('\t\t\t slope',slope)
@@ -704,22 +739,60 @@ c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='tan')
-
 matplotlib.pyplot.xlabel('transcript length (bp)')
 matplotlib.pyplot.ylabel('log$_{2}$ TE')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-    
+
+ub=numpy.max([numpy.max(controlLength['withFootprint'][1]),numpy.max(controlLength['withoutFootprint'][1])])
+lb=numpy.min([numpy.min(controlLength['withFootprint'][1]),numpy.min(controlLength['withoutFootprint'][1])])
+matplotlib.pyplot.ylim([lb+lb*0.05,ub+ub*0.05])
+
 matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig('figures/TE.control.transcript.length.pdf')
+matplotlib.pyplot.savefig(figureName)
+matplotlib.pyplot.clf()
+
+### blocks
+print('about blocks for transcript length...')
+figure_name='figures/TE.control_transcript_length_blocks.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+seaborn.regplot(x=controlLength['withFootprint'][0],y=controlLength['withFootprint'][1],x_bins=20,order=1,color='black')
+matplotlib.pyplot.xlim([0,2400])
+ub=numpy.mean(controlLength['withFootprint'][1])+1.96*numpy.std(controlLength['withFootprint'][1])
+lb=numpy.mean(controlLength['withFootprint'][1])-1.96*numpy.std(controlLength['withFootprint'][1])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.grid(alpha=0.5,ls=':')
+matplotlib.pyplot.xlabel('Transcript length (bp)')
+matplotlib.pyplot.ylabel('log2 Translational efficiency')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
+matplotlib.pyplot.clf()
+
+figure_name='figures/TE.control_transcript_length_blocks.Q1.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+Q1=numpy.quantile(controlLength['withFootprint'][0],0.25)
+a=[]; b=[]
+for i in range(len(controlLength['withFootprint'][0])):
+    if controlLength['withFootprint'][0][i] < Q1:
+        a.append(controlLength['withFootprint'][0][i])
+        b.append(controlLength['withFootprint'][1][i])
+seaborn.regplot(x=a,y=b,x_bins=5,order=1,color='red')
+matplotlib.pyplot.xlim([250,515])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.grid(alpha=0.5,ls=':')
+
+matplotlib.pyplot.xlabel('Transcript length (bp)')
+matplotlib.pyplot.ylabel('log2 Translational efficiency')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
 matplotlib.pyplot.clf()
 
 # 4.2. TE and half-life control
 print('\t working on TE and half-life...')
-
+figureName='figures/TE.control.half-life.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
 x=controlHalfLife['withFootprint'][0]
 y=controlHalfLife['withFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='black')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t with footprints...')
 print('\t\t\t slope',slope)
@@ -732,13 +805,10 @@ c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='black')
-
 # without
-
 x=controlHalfLife['withoutFootprint'][0]
 y=controlHalfLife['withoutFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.0333,mew=0,color='tan')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t without footprints...')
 print('\t\t\t slope',slope)
@@ -751,13 +821,50 @@ c=intercept
 sequence=numpy.arange(min(x),max(x)+0.1,0.1)
 expected=list(m*numpy.array(sequence)+c)
 matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='tan')
-
 matplotlib.pyplot.xlabel('half life (min)')
 matplotlib.pyplot.ylabel('log$_{2}$ TE')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-    
+
+ub=numpy.max([numpy.max(controlHalfLife['withFootprint'][1]),numpy.max(controlHalfLife['withoutFootprint'][1])])
+lb=numpy.min([numpy.min(controlHalfLife['withFootprint'][1]),numpy.min(controlHalfLife['withoutFootprint'][1])])
+matplotlib.pyplot.ylim([lb+lb*0.05,ub+ub*0.05])
+
 matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig('figures/TE.control.half-life.pdf')
+matplotlib.pyplot.savefig(figureName)
+matplotlib.pyplot.clf()
+
+### blocks
+figure_name='figures/TE.control_transcript_half_life_blocks.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+seaborn.regplot(x=controlHalfLife['withFootprint'][0],y=controlHalfLife['withFootprint'][1],x_bins=20,order=1,color='black')
+matplotlib.pyplot.xlim([4,19])
+ub=numpy.mean(totalSety)+1.96*numpy.std(totalSety)
+lb=numpy.mean(totalSety)-1.96*numpy.std(totalSety)
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.grid(alpha=0.5,ls=':')
+
+matplotlib.pyplot.xlabel('Half-life (min)')
+matplotlib.pyplot.ylabel('log2 Translational efficiency')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
+matplotlib.pyplot.clf()
+
+figure_name='figures/TE.control_transcript_half_life_blocks.Q1.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+Q1=numpy.quantile(controlHalfLife['withFootprint'][0],0.25)
+a=[]; b=[]
+for i in range(len(controlHalfLife['withFootprint'][0])):
+    if controlHalfLife['withFootprint'][0][i] < Q1:
+        a.append(controlHalfLife['withFootprint'][0][i])
+        b.append(controlHalfLife['withFootprint'][1][i])
+seaborn.regplot(x=a,y=b,x_bins=5,order=1,color='red')
+matplotlib.pyplot.grid(alpha=0.5,ls=':')
+matplotlib.pyplot.xlim([5,8.5])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.xlabel('Half-life (min)')
+matplotlib.pyplot.ylabel('log2 Translational efficiency')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
 matplotlib.pyplot.clf()
 
 # 5. relationship between expression and half-life
@@ -765,10 +872,12 @@ print()
 print('working on expression versus half-life relationship...')
 
 print('\t working with transcripts without footprints...')
+
+figure_name='figures/expression.half-life.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
 x=expression2halfLife['withoutFootprint'][0]
 y=expression2halfLife['withoutFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.05,mew=0,color='tan')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t slope',slope)
 print('\t\t intercept',intercept)
@@ -785,7 +894,6 @@ print('\t working with transcripts with footprints...')
 x=expression2halfLife['withFootprint'][0]
 y=expression2halfLife['withFootprint'][1]
 matplotlib.pyplot.plot(x,y,'o',alpha=0.05,mew=0,color='black')
-
 slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(x,y)
 print('\t\t slope',slope)
 print('\t\t intercept',intercept)
@@ -801,8 +909,43 @@ matplotlib.pyplot.plot(sequence,expected,'-',lw=2,color='black')
 matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
 matplotlib.pyplot.ylabel('half life (min)')
 matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-matplotlib.pyplot.xlim([-0.1,4.9])
+matplotlib.pyplot.xlim([-0.2,5.5])
+matplotlib.pyplot.ylim([-5,25])
     
 matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig('figures/expression.half-life.pdf')
+matplotlib.pyplot.savefig(figure_name)
+matplotlib.pyplot.clf()
+
+### blocks
+figure_name='figures/expression_half_life_blocks.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+seaborn.regplot(x=expression2halfLife['withFootprint'][0],y=expression2halfLife['withFootprint'][1],x_bins=20,order=1,color='black')
+matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.ylabel('half life (min)')
+matplotlib.pyplot.xlim([0.5,3.5])
+ub=numpy.mean(expression2halfLife['withFootprint'][1])+1.96*numpy.std(expression2halfLife['withFootprint'][1])
+lb=numpy.mean(expression2halfLife['withFootprint'][1])-1.96*numpy.std(expression2halfLife['withFootprint'][1])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
+matplotlib.pyplot.clf()
+
+figure_name='figures/expression_half_life_blocks.Q1.pdf'
+matplotlib.pyplot.figure(figsize=(8,6))
+Q1=numpy.quantile(expression2halfLife['withFootprint'][0],0.25)
+a=[]; b=[]
+for i in range(len(expression2halfLife['withFootprint'][0])):
+    if expression2halfLife['withFootprint'][0][i] < Q1:
+        a.append(expression2halfLife['withFootprint'][0][i])
+        b.append(expression2halfLife['withFootprint'][1][i])
+
+seaborn.regplot(x=a,y=b,x_bins=5,order=1,color='red')
+matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
+matplotlib.pyplot.ylabel('half life (min)')
+matplotlib.pyplot.xlim([0.8,1.4])
+matplotlib.pyplot.ylim([lb,ub])
+matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
+matplotlib.pyplot.tight_layout()
+matplotlib.pyplot.savefig(figure_name)
 matplotlib.pyplot.clf()

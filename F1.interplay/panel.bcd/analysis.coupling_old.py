@@ -480,7 +480,7 @@ for timepoint in timepoints:
         r=numpy.median(log2F)-numpy.median(log2M)
 
         # differenciate between trasncripts with or without footprints
-        if (numpy.median(footprint_TPMs) == 0) or (numpy.median(mRNA_TPMs) < 1):
+        if numpy.median(footprint_TPMs) == 0:
             if rsem_mRNA < 0.3:
 
                 hollowx.append(m); hollowy.append(r)
@@ -641,46 +641,6 @@ matplotlib.pyplot.savefig('figures/TE.trend.all.pdf')
 matplotlib.pyplot.clf()
 print('general model plotted.')
 print('')
-
-### plot blocks
-figureName='figures/TE.blocks.1.pdf'
-matplotlib.pyplot.figure(None,(8,6))
-seaborn.regplot(x=totalSetx,y=totalSety,x_bins=20)
-matplotlib.pyplot.xlim([0.5,3.5])
-matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
-matplotlib.pyplot.ylabel('log$_{2}$ TE')
-matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig(figureName)
-matplotlib.pyplot.clf()
-
-figureName='figures/TE.blocks.2.pdf'
-matplotlib.pyplot.figure(None,(8,6))
-seaborn.regplot(x=totalSetx,y=totalSety,x_bins=20,order=2)
-matplotlib.pyplot.xlim([0.5,3.5])
-matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
-matplotlib.pyplot.ylabel('log$_{2}$ TE')
-matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig(figureName)
-matplotlib.pyplot.clf()
-
-figureName='figures/TE.blocks.3.pdf'
-matplotlib.pyplot.figure(None,(8,6))
-seaborn.regplot(x=totalSetx,y=totalSety,x_bins=20,order=3)
-matplotlib.pyplot.xlim([0.5,3.5])
-matplotlib.pyplot.xlabel('mRNA [log$_{10}$ TPM+1]')
-matplotlib.pyplot.ylabel('log$_{2}$ TE')
-matplotlib.pyplot.grid(True,alpha=0.5,ls=':')
-matplotlib.pyplot.tight_layout()
-matplotlib.pyplot.savefig(figureName)
-matplotlib.pyplot.clf()
-
-sys.exit()
-
-
-
-
 
 # 3. plot pattern from model, or panel b
 print('working on infered model predictions...')
