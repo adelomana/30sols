@@ -140,6 +140,11 @@ for timepoint in timepoints:
     for element in y:
         ally.append(element)
     print(len(allx),len(ally))
+
+    # define group A and group B transcripts
+
+    
+    
     
     # 2.3. plotting dots
     theColor=theColors[int(timepoint[-1])-1]

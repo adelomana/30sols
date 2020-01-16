@@ -129,10 +129,10 @@ def grapher():
     This function builds the figure.
     '''
         
-    medianRNA=[]
-    medianRibo=[]
-    log2FCrna=[]
-    log2FCribo=[]
+    medianRNA_groupA=[];  medianRNA_groupB=[]
+    medianRibo_groupA=[]; medianRibo_groupB=[]
+    log2FCrna_groupA=[];  log2FCrna_groupB=[]
+    log2FCribo_groupA=[]; log2FCribo_groupB=[]
 
     f=open('ribo.groupings.csv','w')
     f.write('# group,geneName,foldChange,medianExpression\n')
@@ -143,23 +143,33 @@ def grapher():
         x=numpy.mean([expressionRC['trna'][geneName][timepoints[-1]][replicate] for replicate in replicates])
         y=numpy.mean([expressionRC['trna'][geneName][timepoints[0]][replicate] for replicate in replicates])
         z=numpy.median([x,y])
-        medianRNA.append(z)
+        #medianRNA.append(z)
 
         # compute median Ribo
         u=numpy.mean([expressionRC['rbf'][geneName][timepoints[-1]][replicate] for replicate in replicates])
         v=numpy.mean([expressionRC['rbf'][geneName][timepoints[0]][replicate] for replicate in replicates])
         t=numpy.median([u,v])
-        medianRibo.append(t)
+        #medianRibo.append(t)
 
         # compute fold-changes
-        log2FCrna.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
-        log2FCribo.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
+        #log2FCrna.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
+        #log2FCribo.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
 
         # saving file with the two different groups
         if expressionFC['tp.4_vs_tp.1']['trna'][geneName] > -4:
             f.write('{},{},{},{}\n'.format('group A',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName],z))
+
+            medianRNA_groupA.append(z)
+            medianRibo_groupA.append(t)
+            log2FCrna_groupA.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
+            log2FCribo_groupA.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
         else:
             f.write('{},{},{},{}\n'.format('group B',geneName,expressionFC['tp.4_vs_tp.1']['trna'][geneName],z))
+
+            medianRNA_groupB.append(z)
+            medianRibo_groupB.append(t)
+            log2FCrna_groupB.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
+            log2FCribo_groupB.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
 
     f.close()
 
@@ -167,7 +177,8 @@ def grapher():
     theSize=8
 
     f, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, sharey=True)
-    ax1.plot(medianRNA,log2FCrna,'o',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq')
+    ax1.plot(medianRNA_groupA,log2FCrna_groupA,'s',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq a')
+    ax1.plot(medianRNA_groupB,log2FCrna_groupB,'D',alpha=0.5,mew=0,ms=theSize,color='black',label='RNA-seq b')
     ax1.set_xlim([7,17])
     ax1.set_ylim([-6.5,0])
     ax1.set_xlabel('Median over time,')
@@ -176,7 +187,8 @@ def grapher():
     ax1.grid(alpha=0.5, ls=':')
     ax1.legend(framealpha=1,loc=1,ncol=1,fontsize=14)
     
-    ax2.plot(medianRibo,log2FCribo,'o',alpha=0.5,mew=0,ms=theSize,color='red',label='Ribo-seq')
+    ax2.plot(medianRibo_groupA,log2FCribo_groupA,'s',alpha=0.5,mew=0,ms=theSize,color='red',label='Ribo-seq a')
+    ax2.plot(medianRibo_groupB,log2FCribo_groupB,'D',alpha=0.5,mew=0,ms=theSize,color='red',label='Ribo-seq b')
     ax2.set_xlim([3.5,10.5])
     ax2.set_ylim([-6.5,0])
     ax2.set_xlabel('log$_2$(normalized counts)')
