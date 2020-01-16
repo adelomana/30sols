@@ -58,8 +58,8 @@ def riboPtNamesReader():
 # 0. user defined variables
 expressionDataDir='/Volumes/omics4tb/alomana/projects/TLR/data/DESeq2/'
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
-theColors=['orange','green','blue']
-theTimePoints=[2,3,4]
+theColors=['blue','green','orange']
+theTimePoints=[4,3,2]
 sampleTypes=['trna','rbf']
 
 # 1. read data
@@ -67,44 +67,62 @@ riboPtNames=riboPtNamesReader()
 expression=expressionReader()
 
 # 2. process data
-values=[]
-for i in range(len(theTimePoints)):
 
-    comparison='tp.{}_vs_tp.1'.format(theTimePoints[i])
-    comparisonLabel='TP {}/TP 1'.format(theTimePoints[i])
+# 2.1. process last time point to discriminate group A vs group B
+index=0
+comparison='tp.{}_vs_tp.1'.format(theTimePoints[index])
+comparisonLabel='TP {}/TP 1'.format(theTimePoints[index])
+allFCxA=[]; allFCyA=[]
+allFCxB=[]; allFCyB=[]
+groupA=[]
+for geneName in riboPtNames:
+    fcx=expression[comparison]['trna'][geneName]
+    fcy=expression[comparison]['rbf'][geneName]
 
-    # work per gene
-    allFCx=[]; allFCy=[]
+    if fcx != 0 or fcy != 0:
+        if fcx < -4:
+            groupA.append(geneName)
+            allFCxA.append(fcx); allFCyA.append(fcy)
+        else:
+            allFCxB.append(fcx); allFCyB.append(fcy)
+    else:
+        print('excluded:\t',geneName,fcx,fcy)
+
+# plot values
+matplotlib.pyplot.plot(allFCxA,allFCyA,'s',alpha=0.5,mew=0,ms=8,color=theColors[index],label=comparisonLabel)
+matplotlib.pyplot.plot(allFCxB,allFCyB,'D',alpha=0.5,mew=0,ms=8,color=theColors[index],label=comparisonLabel)
+
+# 2.2. process middle time points knowing group labels
+for index in [1,2]:
+    comparison='tp.{}_vs_tp.1'.format(theTimePoints[index])
+    comparisonLabel='TP {}/TP 1'.format(theTimePoints[index])
+    allFCxA=[]; allFCyA=[]
+    allFCxB=[]; allFCyB=[]
+
     for geneName in riboPtNames:
-
-        # compute fold-changes
         fcx=expression[comparison]['trna'][geneName]
         fcy=expression[comparison]['rbf'][geneName]
 
         if fcx != 0 or fcy != 0:
-            allFCx.append(fcx); allFCy.append(fcy)
+            if geneName in groupA:
+                allFCxA.append(fcx); allFCyA.append(fcy)
+            else:
+                allFCxB.append(fcx); allFCyB.append(fcy)
         else:
             print('excluded:\t',geneName,fcx,fcy)
 
     # plot values
-    matplotlib.pyplot.plot(allFCx,allFCy,'o',alpha=0.5,mew=0,ms=8,color=theColors[i],label=comparisonLabel)
+    matplotlib.pyplot.plot(allFCxA,allFCyA,'s',alpha=0.5,mew=0,ms=8,color=theColors[index],label=comparisonLabel)
+    matplotlib.pyplot.plot(allFCxB,allFCyB,'D',alpha=0.5,mew=0,ms=8,color=theColors[index],label=comparisonLabel)
 
-# closing the figure
+# close figure
+figureName='figure.all.pdf'
 matplotlib.pyplot.xlabel('RNA-seq, log$_2$ FC')
 matplotlib.pyplot.ylabel('Ribo-seq, log$_2$ FC')
-
-#matplotlib.pyplot.legend(markerscale=1.5,framealpha=1)
-
 matplotlib.pyplot.xticks([-6,-5,-4,-3,-2,-1,0])
-
 matplotlib.pyplot.xlim([-6.5,0.5])
 matplotlib.pyplot.ylim([-6.5,0.5])
-
-#matplotlib.pyplot.plot([-6,0],[0,0],':',color='black',alpha=0.5)
-#matplotlib.pyplot.plot([0,0],[-6,0],':',color='black',alpha=0.5)
 matplotlib.pyplot.plot([-6,0],[-6,0],':',color='black',alpha=0.5)
-
-figureName='figure.all.pdf'
 matplotlib.pyplot.tight_layout()
 matplotlib.pyplot.axes().set_aspect('equal')
 matplotlib.pyplot.savefig(figureName)

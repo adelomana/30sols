@@ -143,17 +143,11 @@ def grapher():
         x=numpy.mean([expressionRC['trna'][geneName][timepoints[-1]][replicate] for replicate in replicates])
         y=numpy.mean([expressionRC['trna'][geneName][timepoints[0]][replicate] for replicate in replicates])
         z=numpy.median([x,y])
-        #medianRNA.append(z)
 
         # compute median Ribo
         u=numpy.mean([expressionRC['rbf'][geneName][timepoints[-1]][replicate] for replicate in replicates])
         v=numpy.mean([expressionRC['rbf'][geneName][timepoints[0]][replicate] for replicate in replicates])
         t=numpy.median([u,v])
-        #medianRibo.append(t)
-
-        # compute fold-changes
-        #log2FCrna.append(expressionFC['tp.4_vs_tp.1']['trna'][geneName])
-        #log2FCribo.append(expressionFC['tp.4_vs_tp.1']['rbf'][geneName])
 
         # saving file with the two different groups
         if expressionFC['tp.4_vs_tp.1']['trna'][geneName] > -4:
