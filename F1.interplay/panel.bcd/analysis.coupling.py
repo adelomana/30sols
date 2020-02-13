@@ -664,12 +664,27 @@ matplotlib.pyplot.clf()
 
 figureName='figures/TE.blocks.order.1.Q1.pdf'
 matplotlib.pyplot.figure(figsize=(8,6))
+Q0=numpy.quantile(totalSetx,0)
 Q1=numpy.quantile(totalSetx,0.25)
+Q2=numpy.quantile(totalSetx,0.50)
+Q3=numpy.quantile(totalSetx,0.75)
+Q4=numpy.quantile(totalSetx,1)
+south=Q0
+north=Q1
 a=[]; b=[]
 for i in range(len(totalSetx)):
-    if totalSetx[i] < Q1:
+    if south <= totalSetx[i] < north:
         a.append(totalSetx[i])
         b.append(totalSety[i])
+print(south,':',north)
+print('size,min,max:',len(a),numpy.min(a),numpy.max(a))
+print('\t regression results:')
+slope,intercept,r_value,p_value,std_err=scipy.stats.linregress(a,b)
+print('\t\t slope',slope)
+print('\t\t intercept',intercept)
+print('\t\t r_value',r_value)
+print('\t\t pvalue',p_value)
+print('\t\t std_err',std_err)
 seaborn.regplot(x=a,y=b,x_bins=5,order=1,color='red')
 matplotlib.pyplot.xlim([0.65,1.3])
 matplotlib.pyplot.ylim([lb,ub])
