@@ -7,7 +7,7 @@ get_topGO_object <- function(genes,gene2go,ontology=c("BP","MF","CC")) {
   names(geneList) <- names(gene2go)
   GOdata <- new("topGOdata", ontology = ontology, allGenes = geneList, annot = annFUN.gene2GO, gene2GO = gene2go)
   #GOdata can be used directly for analysis, e.g. 
-  test <- runTest(GOdata,algorithm="classic",statistic="fisher")
+  test <- runTest(GOdata, algorithm="classic", statistic="fisher")
   results <- GenTable(GOdata,test,topNodes=20)
   return(GOdata)
 }
