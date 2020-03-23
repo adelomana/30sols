@@ -43,17 +43,28 @@ run.topGO.enrichment <-function(my.members){
 ###
 
 # 0. user defined variables
-input_file = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/results.orange.txt'
-output_file = '/Users/alomana/github/30sol/F1.interplay/panel.a/enrichment/results/enrichment.orange.GO.DETs.txt'
-label = 'black_minus'
+det_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/'
+enrichment_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/enrichment/results/'
+labels = c('blue', 'orange')
 
-# 1. reading
-clusters <- read.delim(input_file, sep="\t", header=F)
-mylist <- list()
-mylist[[label]] <- as.vector(clusters$V2)
+# 1. iterations
+tempo = lapply(labels, function(label){
+  input_file = paste(det_folder, 'results.', label, '.txt', sep='')
+  output_file = paste(enrichment_folder, 'enrichment.', label, '.GO.DETs.txt', sep='')
+  
+  print(label)
+  print(input_file)
+  print(output_file)
+  print('----')
+  
+  # 1.1. read  
+  clusters <- read.delim(input_file, sep="\t", header=F)
+  mylist <- list()
+  mylist[[label]] <- as.vector(clusters$V2)
 
-# 2. analysis
-hsa.enrichment <- run.topGO.enrichment(mylist)
-names(hsa.enrichment) <- names(mylist)
-hsa.go.enrichment <- post.process(hsa.enrichment)
-write.table(hsa.go.enrichment, file=output_file, sep="\t", row.names=F)
+  # 1.2. analysis
+  hsa.enrichment <- run.topGO.enrichment(mylist)
+  names(hsa.enrichment) <- names(mylist)
+  hsa.go.enrichment <- post.process(hsa.enrichment)
+  write.table(hsa.go.enrichment, file=output_file, sep="\t", row.names=F)
+})

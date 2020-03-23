@@ -1,12 +1,9 @@
 ###
-### This script runs gene set enrichment based on arCOG based on annotation from https://ftp.ncbi.nih.gov/pub/wolf/COGs/arCOG/
+### This script associates RS IDs to arCOG based on annotation from https://ftp.ncbi.nih.gov/pub/wolf/COGs/arCOG/
 ###
 
 import sys, requests, re
 import logging, socket, time
-
-## 1. create a database with DETs, group and arCOG
-## 2. run enrichment---Fisher exact test with fdr_bh
 
 def arCOG_mapper():
 
@@ -17,8 +14,6 @@ def arCOG_mapper():
     for arCOG in arCOGs:
         PIs = cog2pi[arCOG]
         RSs = []
-
-        print(arCOG, PIs)
         
         for PI in PIs:
             NP = None; WP = None; RS = None
@@ -148,7 +143,7 @@ arCOG_annotations_file='/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/hsa_n
 PI2NP_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/ar14.fa.subset.txt'
 np_conversion_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/old_new_conversion.txt'
 gcf_file = '/Volumes/omics4tb/alomana/projects/TLR/data/transcriptome/GCF_000006805.1_ASM680v1_genomic.gff'
-DET_dir = '/Users/alomana/github/30sol/F1.interplay/panel.a/results'
+association_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/arCOG.final.annotation.txt'
 
 # 0.1. logging information
 hostname = socket.gethostname()
@@ -177,14 +172,10 @@ wp2rs = wp2rs_mapper()
 # 1.5. associate RS to arCOG
 rs2arCOG = arCOG_mapper()
 
-"""
-# 1.2. associate geneIDs to color
-gene_name2color=DETs_reader()
-
-# 1.3. associate gene names to GI
-gene_name2GI=annotation_reader()
-
-# 1.
-
-# run enrichment    
-"""
+# 2. save associations
+logger.info('write annotation')
+with open(association_file, 'w') as f:
+    for rs in rs2arCOG:
+        for element in rs2arCOG[rs]:
+            f.write('{}\t{}\n'.format(rs, element))
+    
