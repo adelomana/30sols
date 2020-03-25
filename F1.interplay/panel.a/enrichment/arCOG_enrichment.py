@@ -142,7 +142,23 @@ def enrichment(color):
             if (alt_hypotheses[i] == True) and (pvals[i] < 0.05) or (categories[i] == 'arCOG_null'):
                 info = annotation_names[categories[i]]
                 hit_rank = hits[i]
-                f.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(color, set_size, categories[i], info, hit_rank, pvals[i], pvals_corrected[i]))
+                # add regulation
+                if color == 'black.plus':
+                    regulation = 'Transcriptional (+)'; color = 'black'
+                if color == 'black.minus':
+                    regulation = 'Transcriptional (-)'; color = 'black'
+                if color == 'blue':
+                    regulation = 'Compensatory (-)'
+                if color == 'red':
+                    regulation = 'Compensatory (+)'
+                if color == 'green':
+                    regulation = 'Translational (-)'
+                if color == 'orange':
+                    regulation = 'Translational (+)'
+                if color == 'yellow':
+                    regulation = 'No change'
+                #
+                f.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(regulation, color, set_size, categories[i], info, hit_rank, pvals[i], pvals_corrected[i]))
     
     return None
 
@@ -153,7 +169,7 @@ def enrichment(color):
 # 0. user-defined variables
 functional_annotation_file = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/arCOG.final.annotation.txt'
 DET_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/'
-colors = ['black.plus', 'black.minus', 'blue', 'dubious', 'green', 'orange', 'red', 'yellow']
+colors = ['black.plus', 'black.minus', 'blue', 'green', 'orange', 'red', 'yellow']
 results_dir = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/enrichment/'
 arCOG_names = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/ar14.arCOGdef19.tab'
 
@@ -176,3 +192,14 @@ logger.info('analysis')
 for color in colors:
     DETs = DET_reader(color)
     enrichment(color)
+
+# 3. analysis of the 21%
+# Fisher exact test for 21%: 228 = 79 + 110 + 15 + 24 ---> 78 + 105 + 15 + 24 = 222 | 18 + 40 + 8 + 12 = 78
+
+hits_in_a = 78
+hits_in_b = 782-78
+no_hits_in_a = 222 - 78
+no_hits_in_b = 2473 - hits_in_b
+oddsratio, pvalue = scipy.stats.fisher_exact([[hits_in_a, hits_in_b], [no_hits_in_a, no_hits_in_b]])
+
+logger.info('analysis of the 21%, hits: {}; P value: {}'.format(78, pvalue))
