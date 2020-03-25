@@ -34,7 +34,7 @@ def arCOG_mapper():
         for RS in RSs:
             if RS not in mapped_RSs:
                 mapped_RSs.append(RS)
-    logger.info('{} RS identifiers have a arCOG mapping'.format(len(mapped_RSs)))
+    logger.info('{} out of {} RS identifiers have a arCOG mapping'.format(len(mapped_RSs), len(wp2rs)))
 
     rs2arcog = {}
     for RS in mapped_RSs:
@@ -42,6 +42,13 @@ def arCOG_mapper():
         for arCOG in arcog2rs:
             if RS in arcog2rs[arCOG]:
                 rs2arcog[RS].append(arCOG)
+
+    # adding unavailable
+    all_rs = []
+    for wp in wp2rs:
+        rs = wp2rs[wp]
+        if rs not in rs2arcog:
+            rs2arcog[rs] = ['arCOG_null']
         
     return rs2arcog
 
@@ -128,9 +135,12 @@ def wp2rs_mapper():
             if len(v) > 3:
                 info = v[-1]
                 if 'VNG_RS' in info and 'WP_' in info:
+                    
                     RS = 'VNG_RS' + info.split('VNG_RS')[1].split(';')[0]
                     WP = 'WP_' + info.split('WP_')[1].split(';')[0].split('-')[0]
-                    wp2rs[WP] = RS
+
+                    if 'internal stop' not in info:
+                        wp2rs[WP] = RS
             
     return wp2rs
 
@@ -141,9 +151,10 @@ def wp2rs_mapper():
 # 0. user defined variables
 arCOG_annotations_file='/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/hsa_nrc1_ar14.arCOG.csv'
 PI2NP_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/ar14.fa.subset.txt'
-np_conversion_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/old_new_conversion.txt'
+np_conversion_file = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/old_new_conversion.txt'
 gcf_file = '/Volumes/omics4tb/alomana/projects/TLR/data/transcriptome/GCF_000006805.1_ASM680v1_genomic.gff'
-association_file = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/arCOG.final.annotation.txt'
+association_file = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/arCOG.final.annotation.txt'
+arCOG_names = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/ar14.arCOGdef19.tab'
 
 # 0.1. logging information
 hostname = socket.gethostname()
@@ -155,6 +166,7 @@ logger.setLevel(logging.INFO)
 
 #
 # 1. create a database with DETs, group and arCOG
+#
 
 # 1.1. associate protein IDs to arCOG
 cog2pi, arCOGs = arCOG_reader()
@@ -172,10 +184,27 @@ wp2rs = wp2rs_mapper()
 # 1.5. associate RS to arCOG
 rs2arCOG = arCOG_mapper()
 
+# 1.6. read arCOG
+annotation_names = {}
+with open(arCOG_names, 'r') as f:
+    for line in f:
+        vector = line.split('\t')
+        ID = vector[0]
+        info = vector[3]
+        annotation_names[ID] = info
+
+#
 # 2. save associations
+#
 logger.info('write annotation')
 with open(association_file, 'w') as f:
     for rs in rs2arCOG:
         for element in rs2arCOG[rs]:
+
+            # last check on unknown functions
+            if element != 'arCOG_null':
+                if annotation_names[element] == 'Uncharacterized protein':
+                    element = 'arCOG_null'
+
+            # writing
             f.write('{}\t{}\n'.format(rs, element))
-    

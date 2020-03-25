@@ -9,5 +9,7 @@ get_topGO_object <- function(genes,gene2go,ontology=c("BP","MF","CC")) {
   #GOdata can be used directly for analysis, e.g. 
   test <- runTest(GOdata, algorithm="classic", statistic="fisher")
   results <- GenTable(GOdata, test, topNodes=20)
+  #allGO = usedGO(object = GOdata) 
+  #results <- GenTable(GOdata, test, topNodes=length(allGO))
   return(GOdata)
 }

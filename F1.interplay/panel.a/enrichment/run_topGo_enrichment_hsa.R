@@ -3,6 +3,7 @@
 #BiocManager::install("topGO")
 
 library(topGO)
+library(multtest)
 
 # enrichment analysis function
 run.topGO.enrichment <-function(my.members){
@@ -30,7 +31,13 @@ run.topGO.enrichment <-function(my.members){
       tmp = get_topGO_object(my.members[[first]], gene2go, second)
       test <- runTest(tmp,algorithm="classic",statistic="fisher") # no multiple testing yet!!!
       results <- GenTable(tmp,test,topNodes=length(test@score))
-      results <- results[results[,6]<=0.05,]
+      results <- results[results[,6]<=0.05,] # reomve below significance
+      results <- results[results[,4]>1,] # remove below 2 hits
+      # correct pvalues
+      uncorrected = results[,6]
+      corrected = p.adjust(uncorrected, method = 'BH')
+      results['adj'] = corrected
+      results <- results[results[,7]<=0.05,]
     })
     names(o) <- c("BP", "CC", "MF")
     
@@ -45,7 +52,7 @@ run.topGO.enrichment <-function(my.members){
 # 0. user defined variables
 det_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/'
 enrichment_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/enrichment/results/'
-labels = c('blue', 'orange')
+labels = c('black.plus', 'black.minus', 'blue', 'dubious', 'green', 'orange', 'red', 'yellow')
 
 # 1. iterations
 tempo = lapply(labels, function(label){
@@ -61,7 +68,7 @@ tempo = lapply(labels, function(label){
   clusters <- read.delim(input_file, sep="\t", header=F)
   mylist <- list()
   mylist[[label]] <- as.vector(clusters$V2)
-
+  
   # 1.2. analysis
   hsa.enrichment <- run.topGO.enrichment(mylist)
   names(hsa.enrichment) <- names(mylist)

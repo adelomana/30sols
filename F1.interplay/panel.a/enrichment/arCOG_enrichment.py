@@ -21,6 +21,15 @@ def annotation_reader():
             else:
                 annotation[rs].append(cog)
 
+    annotation_names = {}
+    with open(arCOG_names, 'r') as f:
+        for line in f:
+            vector = line.split('\t')
+            ID = vector[0]
+            info = vector[3]
+            annotation_names[ID] = info
+    annotation_names['arCOG_null'] = 'Unknown function'
+
     # summary
     retrieved_genes_rank = len(list(annotation.keys()))
     cogs = []
@@ -32,13 +41,12 @@ def annotation_reader():
     retrieved_cogs_rank = len(cogs)
     logger.info('retrieved RS: {}; retrieved arCOGs: {}'.format(retrieved_genes_rank, retrieved_cogs_rank))
 
-    return annotation, retrieved_genes_rank, retrieved_cogs_rank
+    return annotation, annotation_names, retrieved_genes_rank, retrieved_cogs_rank
 
 def DET_reader(color):
 
     DETs = []; subset = []
     working_file = '{}results.{}.txt'.format(DET_folder, color)
-    print(working_file)
     with open(working_file, 'r') as f:
         for line in f:
             v = line.split()
@@ -49,6 +57,8 @@ def DET_reader(color):
                 DETs.append(rs)
                 if rs in annotation:
                     subset.append(rs)
+                #else:
+                #    print('{} not found'.format(rs))
     logger.info('retrieved DETs: {}; with annotation: {}'.format(len(DETs), len(subset)))
     
     return subset
@@ -74,44 +84,65 @@ def enrichment(color):
 
     logger.info('computing Fisher exact test for each category')
 
-    pvals = []
+    pvals = []; hits = []; expected = []
     
     for category in categories:
 
-        
-        # define elements of that category in the color
+        # define elements of a functional category in the color
         hits_in_a = 0; opp1 = 0
-        print(len(DETs))
+        #print('lenDETs', len(DETs))
         for DET in DETs:
             if category in annotation[DET]:
                 hits_in_a = hits_in_a + 1
             else:
                 opp1 = opp1 + 1
-        print(hits_in_a, opp1)
-                
+        #print('hits_ina', hits_in_a, opp1)
 
-        # define elements of that category in the rest of the genome that is not the color
-        hits_in_B = 2
+        # define elements of that functional category in the rest of the genome that is not the color
+        hits_in_b = 0
+        for rs in annotation:
+            if category in annotation[rs]:
+                if rs not in DETs:
+                    hits_in_b = hits_in_b + 1
+        #print('hits in bkground', hits_in_b)
 
         # define elements in color that do not have that category
-        no_hits_in_A = 2
+        no_hits_in_a = len(DETs) - hits_in_a
+        #print('nohitsinA', no_hits_in_a)
 
         # define elements in the rest of the genome that is not the color, that do not have that category
-        no_hits_in_B = 5
+        no_hits_in_b = 0
+        for rs in annotation:
+            if rs not in DETs:
+                if category not in annotation[rs]:
+                    no_hits_in_b = no_hits_in_b + 1
+        #print('nohitsinB', no_hits_in_b)
+        #print('total genome', len(list(annotation.keys())))
 
         # perform test
-        hits_in_a = 8
-        oddsratio, pvalue = scipy.stats.fisher_exact([[hits_in_a, hits_in_b], [no_hits_in_A, no_hits_in_b]])
-        print(oddsratio, pvalue)
+        oddsratio, pvalue = scipy.stats.fisher_exact([[hits_in_a, hits_in_b], [no_hits_in_a, no_hits_in_b]])
+        #print(category, hits_in_a, hits_in_b, no_hits_in_a, no_hits_in_b, pvalue)
+        
         pvals.append(pvalue)
+        hits.append(hits_in_a)
+        expect = ((hits_in_a + hits_in_b) / len(list(annotation.keys()))) * len(DETs)
+        expected.append(expect)
 
     # f.3. multiple testing correction
     logger.info('correcting for multiple-testing')
-    reject, pvals_corrected = statsmodels.stats.multitest.multipletests(pvals, alpha=0.1, method='fdr_bh')
-    print(pvals)
-    print(pvals_corrected)
-    print(reject)
-    sys.exit()
+    output = statsmodels.stats.multitest.multipletests(pvals, alpha=0.1, method='fdr_bh')
+    alt_hypotheses = output[0]
+    pvals_corrected = output[1]
+
+    # f.4. store results
+    set_size = len(DETs)
+    enrichment_file = results_dir + color + '.txt'
+    with open(enrichment_file, 'w') as f:
+        for i in range(len(categories)):
+            if (alt_hypotheses[i] == True) and (pvals[i] < 0.05) or (categories[i] == 'arCOG_null'):
+                info = annotation_names[categories[i]]
+                hit_rank = hits[i]
+                f.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(color, set_size, categories[i], info, hit_rank, pvals[i], pvals_corrected[i]))
     
     return None
 
@@ -122,7 +153,9 @@ def enrichment(color):
 # 0. user-defined variables
 functional_annotation_file = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/arCOG.final.annotation.txt'
 DET_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/'
-colors = ['blue', 'orange']
+colors = ['black.plus', 'black.minus', 'blue', 'dubious', 'green', 'orange', 'red', 'yellow']
+results_dir = '/Volumes/omics4tb2/alomana/projects/TLR/results/arCOG/enrichment/'
+arCOG_names = '/Volumes/omics4tb2/alomana/projects/TLR/data/arCOG/ar14.arCOGdef19.tab'
 
 # 0.1. logging information
 hostname = socket.gethostname()
@@ -134,8 +167,8 @@ logger.setLevel(logging.INFO)
 
 # 1. read information
 logger.info('reading files')
-annotation, retrieved_genes_rank, retrieved_cogs_rank = annotation_reader()
-print(annotation)
+annotation, annotation_names, retrieved_genes_rank, retrieved_cogs_rank = annotation_reader()
+
 # 2. analysis
 logger.info('analysis')
 
