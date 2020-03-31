@@ -2,25 +2,24 @@ import sys,numpy,scipy
 import matplotlib,matplotlib.pyplot
 import sklearn,sklearn.cluster,sklearn.datasets
 
-
 # 0. define user variables
 print('initializing...')
 dataFile='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/ribosomal_corems_motif_counts.txt'
 outputFile='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/ribosomal_corems_motif_counts.clean.csv'
 ribosomalGenesFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
+ribosomal_annotation_file = '/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 
 # 1. read data
 print('reading data...')
 
 # 1.1. read ribosomal gene names
-ribosomalGenes=[]
-with open(ribosomalGenesFile,'r') as f:
+RP_gene_names = []
+with open(ribosomal_annotation_file, 'r') as f:
     next(f)
     for line in f:
-        vector=line.split()
-        ribosomalGenes.append(vector[0])
-# convert RP gene IDs to new annotation
-
+        vector = line.split('\t')
+        vng = vector[1]
+        RP_gene_names.append(vng)
 
 # 1.2. reading corem motif counts
 data={} # data[coremName]=[(GRE,frequency),(GRE,frequency),...]
@@ -41,32 +40,34 @@ with open(dataFile,'r') as f:
         gene_memberships = [element.replace('"', '') for element in gene_memberships]
         gene_memberships = [element.replace('\n', '') for element in gene_memberships]
 
-        is_RP_corem = False # filter out corems that have < 80% RPs and > 5 non-RPs
-        labels = [element in ribosomalGenes for element in gene_memberships]
-        print(gene_memberships[:10])
-        print(ribosomalGenes[:10])
-        print(labels)
-        sys.exit()
+        # filter out corems that have < 80% RPs and > 5 non-RPs
+        RP_members = []; non_RP_members = []
+        for element in gene_memberships:
+            if element in RP_gene_names:
+                RP_members.append(element)
+            else:
+                non_RP_members.append(element)
+            
+        co = len(gene_memberships)
+        rb = len(RP_members)
+        nrb = len(non_RP_members)
+        purity = rb / co
+
+        if rb > 2 and purity > 1/3:
+            print('purity', purity)
+            print('ribo : non ribo', rb, nrb)
+            print()
         
+            if coremName not in data.keys():
+                data[coremName]={}
 
-        print(coremName, motifName, frequency)
-        print(gene_membership)
-        print()
-
-
+            if motifName not in data[coremName].keys():
+                data[coremName][motifName]=frequency
         
-        if coremName not in data.keys():
-            data[coremName]={}
-
-        if motifName not in data[coremName].keys():
-            data[coremName][motifName]=frequency
-        
-        if coremName not in allCoremNames:
-            allCoremNames.append(coremName)
-        if motifName not in allGREnames:
-            allGREnames.append(motifName)
-
-sys.exit()
+            if coremName not in allCoremNames:
+                allCoremNames.append(coremName)
+            if motifName not in allGREnames:
+                allGREnames.append(motifName)
 
 # 2. arranging data
 print('preparing data...')
@@ -77,12 +78,6 @@ sortedCoremNames=[str(element) for element in coremInt]
 GREnamesInt=[int(element.split('_')[1]) for element in allGREnames]
 GREnamesInt.sort()
 sortedGREnames=['MOTC_{}'.format(element) for element in GREnamesInt]
-
-# 3. 
-for corem in sortedCoremNames:
-    print(corem)
-sys.exit()
-
 
 # 4. writing the output file
 g=open(outputFile,'w')
