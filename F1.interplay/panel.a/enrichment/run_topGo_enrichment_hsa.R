@@ -11,7 +11,7 @@ run.topGO.enrichment <-function(my.members){
   source("gene2go_function_hsa.R")
   source("topgo_postprocess_hsa.R")
   gene2go <- gene2go.object()
-  
+
   # Enrichment analysis 
   bc1.go <- lapply(seq(1,length(my.members)), function(first){
     # do not test groups with less than 2 members
@@ -52,7 +52,8 @@ run.topGO.enrichment <-function(my.members){
 # 0. user defined variables
 det_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/'
 enrichment_folder = '/Users/alomana/github/30sol/F1.interplay/panel.a/enrichment/results/'
-labels = c('black.plus', 'black.minus', 'blue', 'dubious', 'green', 'orange', 'red', 'yellow')
+labels = c('black.plus', 'black.minus', 'blue', 'dubious', 'green', 'orange', 'red', 'yellow', 'others')
+setwd('/Users/alomana/github/30sol/F1.interplay/panel.a/enrichment/')
 
 # 1. iterations
 tempo = lapply(labels, function(label){
@@ -62,7 +63,6 @@ tempo = lapply(labels, function(label){
   print(label)
   print(input_file)
   print(output_file)
-  print('----')
   
   # 1.1. read  
   clusters <- read.delim(input_file, sep="\t", header=F)
@@ -74,4 +74,6 @@ tempo = lapply(labels, function(label){
   names(hsa.enrichment) <- names(mylist)
   hsa.go.enrichment <- post.process(hsa.enrichment)
   write.table(hsa.go.enrichment, file=output_file, sep="\t", row.names=F)
+  
+  print('----')
 })

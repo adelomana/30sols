@@ -26,6 +26,7 @@ data={} # data[coremName]=[(GRE,frequency),(GRE,frequency),...]
 
 allCoremNames=[]
 allGREnames=[]
+all_non_RPs = []
 
 with open(dataFile,'r') as f:
     next(f)
@@ -40,7 +41,7 @@ with open(dataFile,'r') as f:
         gene_memberships = [element.replace('"', '') for element in gene_memberships]
         gene_memberships = [element.replace('\n', '') for element in gene_memberships]
 
-        # filter out corems that have < 80% RPs and > 5 non-RPs
+        # filter out corems that have < 33% RPs and > 2 non-RPs
         RP_members = []; non_RP_members = []
         for element in gene_memberships:
             if element in RP_gene_names:
@@ -52,6 +53,10 @@ with open(dataFile,'r') as f:
         rb = len(RP_members)
         nrb = len(non_RP_members)
         purity = rb / co
+
+        for element in non_RP_members:
+            if element not in all_non_RPs:
+                all_non_RPs.append(element)
 
         if rb > 2 and purity > 1/3:
             print('purity', purity)
@@ -68,6 +73,14 @@ with open(dataFile,'r') as f:
                 allCoremNames.append(coremName)
             if motifName not in allGREnames:
                 allGREnames.append(motifName)
+
+# prepare file for enrichment. Strange format to make it compatible
+print('non RP genes', len(all_non_RPs))
+file_name = '/Users/alomana/github/30sol/F1.interplay/panel.a/results/results.others.txt'
+with open(file_name, 'w') as f:
+    for element in all_non_RPs:
+        f.write('{}\t{}\t{}\n'.format('other', element, 'tempo'))
+print('done')
 
 # 2. arranging data
 print('preparing data...')

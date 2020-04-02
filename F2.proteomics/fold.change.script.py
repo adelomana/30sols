@@ -23,11 +23,10 @@ def proteomicsDataReader():
     replicates=[]
     
     allFiles=os.listdir(proteomicsDataFolder)
-    csvFiles=[element for element in allFiles if '.csv' in element and '._' not in element]
-
-    lostGenes=[]
+    csvFiles=[element for element in allFiles if '.csv' in element and '._' not in element and 'rbf' in element]
 
     for csvFile in csvFiles:
+        print(csvFile)
         path=proteomicsDataFolder+csvFile
 
         brokenName=csvFile.split('.')
@@ -53,34 +52,32 @@ def proteomicsDataReader():
             next(f)
             for line in f:
                 vector=line.split(',')
+                geneName = vector[0]
 
-                try:
-                    geneName=synonyms[vector[0]]
-
+                if geneName in riboPtNames:
+                    
                     if geneName not in geneNames:
                         geneNames.append(geneName)
-
+                        
                     a=float(vector[2])
                     b=float(vector[6])
                     c=float(vector[10])
-
                     data[condition][replicate]['tp2vs1'][geneName]=a
                     data[condition][replicate]['tp3vs1'][geneName]=b
                     data[condition][replicate]['tp4vs1'][geneName]=c
-                    
-                except:
-                    if vector[0] not in lostGenes:
-                        lostGenes.append(vector[0])
-                
+                                
     # sort
-    geneNames.sort()
     conditions.sort()
     replicates.sort()
+    geneNames.sort()
 
-    # print lost genes
-    print('\t {} protein lost because of new annotation.'.format(len(lostGenes)))
+    # missing ones
+    for element in riboPtNames:
+        if element not in geneNames:
+            print('lost {}'.format(element))
+    print(geneNames, len(geneNames))
     
-    return data,geneNames,conditions,replicates,timepoints
+    return data, geneNames, conditions, replicates, timepoints
 
 def riboPtNamesReader():
 
@@ -93,37 +90,13 @@ def riboPtNamesReader():
         next(f)
         for line in f:
             vector=line.split('\t')
-            riboPtNames.append(vector[0])
+            riboPtNames.append(vector[1])
+
+    print(riboPtNames)
+    riboPtNames=['VNG1139Gm' if element == 'VNG1139G' else element for element in riboPtNames]
+    print(riboPtNames)
             
     return riboPtNames
-
-def synonymsReader():
-
-    '''
-    This function reads the GFF3 file and returns a dictionary with synonyms between old and new locus names.
-    '''
-
-    synonyms={}
-    with open(annotationFile,'r') as f:
-        for line in f:
-            vector=line.split('\t')
-            if vector[0][0] != '#':
-                info=vector[-1].replace('\n','')
-                if 'old_locus_tag=' in info:
-                    old=info.split('old_locus_tag=')[1].split(';')[0]
-                    new=info.split('ID=')[1].split(';')[0]
-
-                    if '%' in old:
-                        olds=old.split('%2C')
-                        for element in olds:
-                            synonyms[element]=new
-                    else:
-                        synonyms[old]=new
-
-    # reverting mapping
-    synonymsReverseMapping={v: k for k, v in synonyms.items()}
-                
-    return synonyms,synonymsReverseMapping
 
 def violinAnalysis():
 
@@ -151,7 +124,7 @@ def violinAnalysis():
                 violinStructure[label]=[]; violinNames[label]=[]
                 
             for name in riboPtNames:
-                f.write('{}\t'.format(synonymsReverseMapping[name]))
+                f.write('{}\t'.format(name))
                 values=[]
                 for replicate in proteinReplicates:
                     value=None
@@ -172,17 +145,30 @@ def violinAnalysis():
                         if fraction == 'lysate':
                             foldChangesFCL.append(average); timeStampsFCL.append(timeStamp)
                         else:
+                            ###
+                            conversion = {}
+                            conversion['VNG1158G'] = 'S28E'
+                            conversion['VNG0551G'] = 'L44E'
+                            conversion['VNG1159G'] = 'L24E'
+                            conversion['VNG1132G'] = 'S13'   
+                            conversion['VNG0433C'] = 'S10-like'
+                            if name in conversion.keys():
+                                pt = conversion[name]
+                                locx = timeStamp - 1 + 0.1
+                                locy = average
+                                matplotlib.pyplot.text(locx, locy, pt, fontsize=8)
+                            ###
                             foldChangesREF.append(average); timeStampsREF.append(timeStamp)
-                            if name == 'gene-VNG_RS06605':
+                            if name == 'VNG1701G':
                                L14pREF.append([average,timeStamp])
                         if value > 0:
                             print('FC > 0: ',fraction,timepoint,name,value)
                     else:
                         f.write('HCV\n')
-                        print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,synonymsReverseMapping[name],values,rsem))
+                        print('\t\t loosing {} {} {} {} {} for low precision'.format(fraction,timepoint,name,values,rsem))
                 else:
                     f.write('ND\n')
-                    print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,synonymsReverseMapping[name],values))
+                    print('\t\t no appropriate data for {} {} {}({}): {}'.format(timepoint,fraction,name,name,values))
             localList=violinStructure[label]
             cv=numpy.std(localList)/numpy.mean(localList)
             print('{}; n = {}; median = {}; cv = {}'.format(label,len(localList),numpy.median(localList),cv))
@@ -222,15 +208,14 @@ def violinAnalysis():
 # 0. user defined variables.
 ribosomalProteinsFile='/Volumes/omics4tb/alomana/projects/TLR/data/ribosomalGeneNames.txt'
 proteomicsDataFolder='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/all/'
-annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+proteomicsDataFolder='/Users/alomana/scratch/tempo/'
+
 plotValuesFile='/Volumes/omics4tb/alomana/projects/TLR/data/proteomics/violin/foldChanges.txt'
 
 # 1. read data
 print('reading data...')
-
-# 1.1. define synonyms
-synonyms,synonymsReverseMapping=synonymsReader()
 riboPtNames=riboPtNamesReader()
+print(riboPtNames, len(riboPtNames))
 
 # 1.3. define proteomics data
 print('\t reading proteomics data...')
