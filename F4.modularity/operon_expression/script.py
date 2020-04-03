@@ -1,5 +1,5 @@
-import sys,operator,numpy
-import matplotlib,matplotlib.pyplot
+import sys, operator, numpy
+import matplotlib ,matplotlib.pyplot
 matplotlib.rcParams.update({'font.size':6,'font.family':'Arial','xtick.labelsize':6,'ytick.labelsize':6})
 matplotlib.rcParams['pdf.fonttype']=42
 
@@ -254,6 +254,7 @@ working_operon=sorted_operon_sizes[0][0]
 working_genes=operon_membership[working_operon]
 operon_structure_builder(big_operon,working_genes)
 inset_plotter(working_genes,working_operon,None)
+print('** for table ** \t {}\t{}'.format(working_operon, ', '.join([element.replace('gene-', '') for element in working_genes])))
 
 # small operons
 for i in range(7):
@@ -263,6 +264,7 @@ for i in range(7):
     working_genes=operon_membership[working_operon]
     operon_structure_builder(operon_left,working_genes)
     inset_plotter(working_genes,working_operon,'left')
+    print('** for table ** \t {}\t{}'.format(working_operon, ', '.join([element.replace('gene-', '') for element in working_genes])))
 
     # right panel
     operon_right=fig.add_subplot(gs[i+2,1])
@@ -270,13 +272,13 @@ for i in range(7):
     working_genes=operon_membership[working_operon]
     operon_structure_builder(operon_right,working_genes)
     inset_plotter(working_genes,working_operon,'right')
+    print('** for table ** \t {}\t{}'.format(working_operon, ', '.join([element.replace('gene-', '') for element in working_genes])))
 
 # final row with all ribosomal protein genes that are not in operons
 final=fig.add_subplot(gs[-2:,-2:])
 inset_plotter(ribosomal_genes_not_in_operons,'RP genes not in operons','None')
+print('** for table ** \t {}\t{}'.format(working_operon, ', '.join([element.replace('gene-', '') for element in working_genes])))
 
 # close figure
 matplotlib.pyplot.savefig(figure_file)
 matplotlib.pyplot.clf()
-
-###  operon direction, remove top right axis, make panels very close. Put title as operon names.
