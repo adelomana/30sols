@@ -100,7 +100,7 @@ regulatorySequenceSize=100
 GREsDir='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/positions/hal_gres/'
 groupingDataFile='/Volumes/omics4tb/alomana/projects/TLR/data/rp.transcription.groups/ribo.groupings.csv'
 riboOperonsFile='/Volumes/omics4tb/alomana/projects/TLR/data/microbesOnline/riboPtOperons.txt'
-annotationFile='/Volumes/omics4tb/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.gff3'
+annotationFile='/Volumes/omics4tb2/alomana/projects/TLR/data/genome/alo.build.NC002607.NC001869.NC002608.version.2020.04.19.gff3'
 positionsFile='/Volumes/omics4tb/alomana/projects/TLR/data/GREs/positions/hal_genes.tsv'
 
 # 1. read data
@@ -122,6 +122,8 @@ with open(groupingDataFile,'r') as f:
 
         expressionCoordinates[v[1]]=[float(v[2]),float(v[3])]
 
+print(expressionCoordinates)
+
 # 1.2. read operons
 rbptOperons={}
 genesInOperons=[]
@@ -136,6 +138,9 @@ with open(riboOperonsFile,'r') as f:
         for element in elements:
             rbptOperons[name].append(element)
             genesInOperons.append(element)
+
+print('genesInOperons')
+print(genesInOperons)
 
 # 1.3. read gene orientations
 geneOrientations={}
@@ -162,7 +167,8 @@ with open(annotationFile,'r') as f:
         info=v[-1]
         if 'old_locus_tag' in info:
             new=info.split('ID=')[1].split(';')[0]
-            old=info.split('old_locus_tag=')[1].split(';')[0].split('\n')[0]
+            old=info.split('old_locus_tag=')[1].split(';')[0].split('\n')[0].split('%')[0]
+            print(new,old) 
             annotationMap[new]=old
             reverseAnnotationMap[old]=new
 
@@ -210,7 +216,7 @@ for leader in geneLeaders:
         matplotlib.pyplot.plot(x,y,'or')
     else:
         matplotlib.pyplot.plot(x,y,'ob')
-        print('bLEADER',leader)
+        print('LEADER',leader)
 
 matplotlib.pyplot.xlabel('median expression')
 matplotlib.pyplot.ylabel('fold-change')
@@ -223,10 +229,8 @@ matplotlib.pyplot.clf()
 # 4. obtain GRE counts for each gene
 geneGREs={}
 for leader in geneLeaders:
-    
     # 4.1. convert from new annotation to old annotation
     oldAnnotation=annotationMap[leader]
-
     print(leader,oldAnnotation)
     
     # 4.2. define the region of interest considering the gff3 file provided by Wei-ju
@@ -241,7 +245,6 @@ for leader in geneLeaders:
 
         GREID=int(dimension.split('hal_')[1].split('.tsv')[0])
         dataFile=path2search+'/'+dimension
-
 
         # recover GREs above a threshold=10
         threshold=10
@@ -305,6 +308,9 @@ for gene in GREgenes:
     for dimension in dimensions:
         if dimension in geneGREs[gene]:
             value=geneGREs[gene][dimension]
+
+            print(gene, groupLabel, dimension, value)
+            
         else:
             value=0.
             
